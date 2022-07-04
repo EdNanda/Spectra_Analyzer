@@ -1,0 +1,3 @@
+Background	Exponential	0	1
+Primary	Gaussian	100000	525	5
+Secondary	Gaussian	500000 530	13
