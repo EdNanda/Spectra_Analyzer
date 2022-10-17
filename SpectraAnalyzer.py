@@ -1,5 +1,5 @@
 __author__ = "Edgar Nandayapa"
-__version__ = "1.13 (2022)"
+__version__ = "1.15 (2022)"
 
 
 import sys
@@ -895,6 +895,10 @@ class MainWindow(QtWidgets.QMainWindow):
         Tlink.setFont(QFont('Arial', 12))
         
         Tempty = QLabel("")
+        Tversion = QLabel("Current version: "+__version__)
+        Tversion.setAlignment(Qt.AlignCenter)
+        Tversion.setFont(QFont('Arial', 12))
+        
         Tauthor = QLabel("Program created by Edgar Nandayapa (2021)\nHelmholtz-Zentrum Berlin")
         Tauthor.setAlignment(Qt.AlignCenter)
         Tauthor.setFont(QFont('Arial', 8))
@@ -903,6 +907,8 @@ class MainWindow(QtWidgets.QMainWindow):
         Ltext.addWidget(Tempty)
         Ltext.addWidget(Tmodel)
         Ltext.addWidget(Tlink)
+        Ltext.addWidget(Tempty)
+        Ltext.addWidget(Tversion)
         Ltext.addWidget(Tempty)
         Ltext.addWidget(Tauthor)
         
@@ -1098,6 +1104,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.LGfit.addWidget(QLabel("Model"),0,2)
                 self.LGfit.addWidget(QLabel("Parameters"),0,3)
                 self.LGfit.addWidget(QLabel("  fix\ncenter"),0,9)
+                self.LGfit.addWidget(QLabel("  neg."),0,10)
 
             self.LGfit.addWidget(comboNumber,ii*2+1,0)
             self.LGfit.addWidget(comboName,ii*2+1,1)
@@ -1169,6 +1176,7 @@ class MainWindow(QtWidgets.QMainWindow):
             center = QLineEdit()
             sigma = QLineEdit()
             fix_button = QCheckBox()
+            neg_button = QCheckBox()
             
             QLE_array = [amp,center,sigma]
             for ql in QLE_array:
@@ -1182,6 +1190,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.LGfit.addWidget(QLabel("Sigma:"),ii*2+1,7)
             self.LGfit.addWidget(sigma,ii*2+1,8)
             self.LGfit.addWidget(fix_button,ii*2+1,9)
+            self.LGfit.addWidget(neg_button,ii*2+1,10)
             cb[0] = True
 
 
@@ -1541,10 +1550,15 @@ class MainWindow(QtWidgets.QMainWindow):
 
                 if len(amp) >= 1:
                     va = float(amp)
-                    self.pars[mod_name+"amplitude"].set(value=va, min=0)
-                    self.pars[mod_name+"height"].set(max =self.max_int)
+                    if self.LGfit.itemAtPosition(nn*2+1,10).widget().isChecked():
+                        self.pars[mod_name+"amplitude"].set(value=va, max=0)
+                    else:
+                        self.pars[mod_name+"amplitude"].set(value=va, min=0)
                 else:
                     self.pars[mod_name+"amplitude"].set(min=0)
+                    
+                self.pars[mod_name+"height"].set(max =self.max_int)
+                
                 if len(cen) >= 1:
                     vv = float(cen)
                     if self.LGfit.itemAtPosition(nn*2+1,9).widget().isChecked():
