@@ -1602,7 +1602,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.result = self.model_mix.fit(y_data, self.pars, x=x_data)
             comps = self.result.eval_components(x=x_data)
         except ValueError:
-            self.statusBar().showMessage("### One of the models shows an error ###",5000)
+            self.statusBar().showMessage("### One of the models shows an error ###",10000)
             
         
         self.fit_vals = self.result.values
@@ -1962,25 +1962,26 @@ class MainWindow(QtWidgets.QMainWindow):
             pass
         
     def save_current_state(self):
-        # try:
+        self.statusBar().showMessage("Saving file, please wait...")
         try:
             fi,le = self.gfile.rsplit("/",1)
         except:
             fi,le = self.folder.rsplit("/",1)
         
         filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save File',directory=fi,filter="CSV (*.csv) ;; Excel (*.xlsx)")[0]
-
-        self.statusBar().showMessage("Saving file, please wait...")
         
-        if ".xlsx" in filename:
-            self.pdata.to_excel(filename)
-        else:
-            self.pdata.to_csv(filename)
+        try:
+            if ".xlsx" in filename:
+                self.pdata.to_excel(filename)
+            else:
+                self.pdata.to_csv(filename)
+        except:
+            if ".xlsx" in filename:
+                self.mdata.to_excel(filename)
+            else:
+                self.mdata.to_csv(filename)
         
         self.statusBar().showMessage("File saved!",5000)
-        # except:
-        #     ##File not modified
-        #     self.popup_error_msg()
         
     def popup_error_msg(self):
         msg = QMessageBox()
