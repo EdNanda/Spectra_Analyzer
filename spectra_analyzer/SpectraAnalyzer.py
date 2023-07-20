@@ -23,7 +23,7 @@ from PyQt5.QtGui import QFont, QIcon
 from qtrangeslider import QRangeSlider
 from qtrangeslider.qtcompat import QtCore
 from qtrangeslider.qtcompat import QtWidgets as QtW
-from lmfit.models import LinearModel, PolynomialModel
+from lmfit.models import Model, LinearModel, PolynomialModel
 from lmfit.models import ExponentialModel, GaussianModel, LorentzianModel, VoigtModel
 from lmfit.models import PseudoVoigtModel, ExponentialGaussianModel, SkewedGaussianModel, SkewedVoigtModel
 from time import time
@@ -96,7 +96,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Create a placeholder widget to hold our toolbar and canvas.
         self.grid_count = 0
-        self.mnm = 14  ##Max number of models
+        self.mnm = 14  # Max number of models
         self.combo_mod = []
         self.plots = []
         self.models = ["", "Linear", "Polynomial", "Exponential", "Gaussian",
@@ -261,7 +261,7 @@ class MainWindow(QtWidgets.QMainWindow):
         toolbar = NavigationToolbar(self.canvas, self)
         Lgraph = QVBoxLayout()
         LgrTop = QVBoxLayout()
-        self.canvas.setMinimumWidth(500)  ##Fix width so it doesn't change
+        self.canvas.setMinimumWidth(500)  # Fix width so it doesn't change
         self.range_slider = QRangeSlider(QtCore.Qt.Vertical)
         self.range_slider.setValue((0, 100))
         LgrTop.addWidget(toolbar)
@@ -288,7 +288,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def GUI_combobox(self):
         for i in range(self.mnm):
             self.constraints.append([])
-        self.fw = 46  ##width of QLineEdit fields
+        self.fw = 46  # width of QLineEdit fields
         for nn, cb in enumerate(self.combo_mod):
             try:
                 cb[1].currentTextChanged.connect(partial(self.make_ComboBox_fields, cb, nn))
@@ -317,7 +317,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.statusBar().showMessage("File not selected", 5000)
 
     def menu_load_single_manual(self):
-        ##TODO add a description to manual menu
         self.select_file()
         self.is_giwaxs = False
         if self.is_file_selected:
@@ -362,8 +361,8 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.is_file_selected:
             self.separate_xrd_gather_data()
             self.extract_data_for_axis()
-            self.save_data_2DMatrix() # TODO make it button function
-            self.save_heatplot_giwaxs() # TODO make it button function
+            self.save_data_2DMatrix()  # TODO make it button function
+            self.save_heatplot_giwaxs()  # TODO make it button function
             self.menu_load_successful()
         else:
             self.statusBar().showMessage("Folder not selected", 5000)
@@ -388,7 +387,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def save_snapshot_data(self):
         self.fitmodel_process()
-        bar = int(self.ScrollbarTime.value())  ##Read scrollbar value
+        bar = int(self.ScrollbarTime.value())  # Read scrollbar value
 
         x_data = np.array(self.wave)
         y_data = np.array(self.pdata.iloc[:, [bar]].T.values[0])
@@ -405,7 +404,7 @@ class MainWindow(QtWidgets.QMainWindow):
         snapshot.set_index('x_data', inplace=True)
 
         folder = self.file_path.rsplit("/", 1)[0]
-        snapshot.to_excel(folder + "/snapshot_"+ str(bar) + ".xlsx")
+        snapshot.to_excel(folder + "/snapshot_" + str(bar) + ".xlsx")
         self.statusBar().showMessage("Snapshot saved", 5000)
 
     def model_row_add(self):
@@ -414,7 +413,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 gc.setVisible(True)
             self.grid_count += 1
         except:
-            ##TODO: add true/false to avoid overwritting the message
+            # TODO: add true/false to avoid overwritting the message
             self.LGfit.addWidget(QLabel("Reached Maximum"), 100, 0)
 
     def model_row_remove(self):
@@ -430,26 +429,26 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def clean_all_fit_fields(self):
         rows = list(range(self.LGfit.rowCount()))[1:]
-        x_arr = [1, 2, 4, 6, 8]  ## usable grid coordinates
-        y_arr = [h for h in rows if h % 2 == 0]  ## odd rows
+        x_arr = [1, 2, 4, 6, 8]  # usable grid coordinates
+        y_arr = [h for h in rows if h % 2 == 0]  # odd rows
 
         # print(self.grid_count)
 
         for yd in y_arr:
             for xd in x_arr:
                 testmod = self.LGfit.itemAtPosition(yd, xd)
-                try:  ## if widget found
+                try:  # if widget found
                     fieldwid = testmod.widget()
                     if isinstance(fieldwid, QLabel):
                         # print(fieldwid.text())
-                        fieldwid.setText("")  ##remove text
+                        fieldwid.setText("")  # remove text
                 except:
                     pass
         self.LR.setText("")
         self.Lvalue.setText("")
 
     def get_all_fit_fields(self):
-        x_arr = [1, 2, 4, 6, 8]  ## usable grid coordinates
+        x_arr = [1, 2, 4, 6, 8]  # usable grid coordinates
         rows = list(range(self.LGfit.rowCount()))
         y_arr = [h for h in rows if h % 2 == 1]
 
@@ -491,7 +490,7 @@ class MainWindow(QtWidgets.QMainWindow):
                                                          "fit (*.fit)")
 
         if filename[0] != "":
-            x_arr = [1, 2, 4, 6, 8]  ## usable grid coordinates
+            x_arr = [1, 2, 4, 6, 8]  # usable grid coordinates
             with open(filename[0], "r") as fd:
                 reader = csv.reader(fd, delimiter="\t")
                 for cr, row in enumerate(reader):
@@ -530,7 +529,7 @@ class MainWindow(QtWidgets.QMainWindow):
             ind_sizes = []
             last_time = 0
 
-            mnT = 100  ##dummy values to find the temperature range
+            mnT = 100  # dummy values to find the temperature range
             mxT = 0
             step = 0
             for cg, gs in enumerate(self.separated):
@@ -544,7 +543,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     # print(gs["Time"].iloc[0],gs["Time"].iloc[-1],dist)
                     last_time = dist
 
-                ind_sizes.append(dist / total_size)  ##To find the ratio of the frames
+                ind_sizes.append(dist / total_size)  # To find the ratio of the frames
 
                 if mnT > np.min(gs.DegC):
                     mnT = np.min(gs.DegC)
@@ -589,7 +588,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     axs[c].xaxis.tick_top()
 
                 if c == sets - 1:
-                    ##this uses the secondary axis (axt)
+                    # this uses the secondary axis (axt)
                     axt.set_ylabel("Temperature (°C)", color="m")
                     axt.tick_params(axis='y', colors='m')
 
@@ -611,6 +610,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # plt.close()
 
     def select_file(self):
+        # print("  select_file")
         old_folder = "C:\\Data\\test\\"
 
         if not old_folder:  # If empty, go to default
@@ -619,11 +619,13 @@ class MainWindow(QtWidgets.QMainWindow):
         # Select directory from selection
         directory = QtWidgets.QFileDialog.getOpenFileName(self, "Select a file", old_folder)
 
-        if directory[0] != "":  ## if cancelled, keep the old one
+        if directory[0] != "":  # if cancelled, keep the old one
             self.file_path = directory[0]
             file_text = directory[0].rsplit("/", 1)
-            self.folder_path = file_text[0]+"/"
-            self.sample_name = file_text[1]
+            self.folder_path = file_text[0] + "/"
+            # print(self.folder_path)
+            self.sample_name = file_text[1].split(".")[0]
+            # print(self.sample_name)
 
             self.is_file_selected = True
         else:
@@ -631,15 +633,19 @@ class MainWindow(QtWidgets.QMainWindow):
             self.statusBar().showMessage("File not selected", 5000)
 
     def select_folder(self):
+        # print("  select_folder")
         self.folder_path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select a directory')
 
-        if self.folder_path != "":  ## If folder selected, then
+        if self.folder_path != "":  # If folder selected, then
             self.is_file_selected = True
-            file_list = glob(self.folder_path + "\\*")  ## Get all files
-            self.sample_name = self.folder_path.split("/")[-1]
+            self.folder_path = self.folder_path + "/"
+            # print(self.folder_path)
+            file_list = glob(self.folder_path)  # Get all files
+            self.sample_name = self.folder_path.split("/")[-2]
+            # print(self.sample_name)
             input_file = []
 
-            for p in file_list:  ## Keep only log files (for giwaxs)
+            for p in file_list:  # Keep only log files (for giwaxs)
                 if "." not in p[-5:] and "Fitting" not in p:
                     input_file.append(p)
                 else:
@@ -653,7 +659,7 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.is_file_selected = False
 
-    ##TODO always show open file/exp name on title bar
+    # TODO always show open file/exp name on title bar
     def popup_giwaxs_w_log(self):
         self.dgiw = QDialog()
         Lopt = QVBoxLayout()
@@ -689,10 +695,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.giwaxs_gather_data()
 
     def separate_xrd_gather_data(self):
-        pl_files = sorted(glob(self.folder_path + "\\*.dat"))
+        # TODO add files using lists or arrays, then convert to pandas
+        self.statusBar().showMessage("Loading files, please be patient...")
+        # print("  separate_xrd_gather_data")
+        pl_files = sorted(glob(self.folder_path + "*.dat"))
 
-        self.dummy_folderpath_file = self.folder_path + "/" + self.folder_path.split("/")[-1]
-        print(self.dummy_folderpath_file)
+        self.dummy_folderpath_file = self.folder_path + self.sample_name
+        # print(self.dummy_folderpath_file)
         # self.file_path = self.dummy_folderpath_file # TODO this file_path seems wrong, it's missing the extension
 
         for counter, file in enumerate(pl_files):
@@ -706,12 +715,13 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.mdata = self.mdata.join(data.set_index("2Theta"), on="2Theta")
 
         self.mdata.set_index("2Theta", inplace=True)
+        self.statusBar().showMessage("")
 
     def pl_folder_gather_data(self):
         pl_files = sorted(glob(self.folder_path + "\\*.txt"), key=os.path.getmtime)
 
         self.dummy_folderpath_file = self.folder_path + "/" + self.folder_path.split("/")[-1]
-        ##TODO clean this folder gfile
+        # TODO clean this folder gfile
         self.file_path = self.dummy_folderpath_file
 
         for counter, file in enumerate(pl_files):
@@ -735,9 +745,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.mdata.set_index("Wavelength", inplace=True)
 
     def giwaxs_gather_data(self):
-        ## This part pre-reads files to find where data start and end
+        # This part pre-reads files to find where data start and end
 
-        ## read number from popup and fix it if its not there
+        # read number from popup and fix it if its not there
         fnum = self.sel_ds.text()
         if int(fnum) - 1 in range(len(self.giw_names)):
             fnum = int(fnum) - 1
@@ -750,7 +760,7 @@ class MainWindow(QtWidgets.QMainWindow):
         with input1 as f:
             lines = f.readlines()
 
-        ## Analyze file and gather positions of relevant information (time, eta, degC)
+        # Analyze file and gather positions of relevant information (time, eta, degC)
         count = 0
         elapsed = 0
         data1 = False
@@ -788,7 +798,7 @@ class MainWindow(QtWidgets.QMainWindow):
             count += 1
         input1.close()
 
-        ## Gather relevant information from step above with pandas
+        # Gather relevant information from step above with pandas
         end_times = []
         self.separated = []
         for c, t in enumerate(times):
@@ -810,10 +820,10 @@ class MainWindow(QtWidgets.QMainWindow):
             self.separated.append(data)
         combined = combined.reset_index(drop=True)
 
-        ## Gather measurement data using pandas
-        pd.set_option('mode.chained_assignment', None)  ## ignores an error message
+        # Gather measurement data using pandas
+        pd.set_option('mode.chained_assignment', None)  # ignores an error message
         for counter, gf in enumerate(glob(self.dummy_folderpath_file + "_[0-9]*.dat")):
-            ## Read data from file
+            # Read data from file
             Mdata = pd.read_csv(gf, index_col=None, skiprows=15, header=None, delimiter="\t")
             raw_dat = Mdata[[0, 1]]
             raw_dat.rename(columns={0: "TTh", 1: "m_" + str(counter)}, inplace=True)
@@ -851,7 +861,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.set_default_fitting_range()
 
     def extract_data_for_axis(self):
-        ## Extract relevant data
+        # Extract relevant data
         self.xtime = self.mdata.keys().astype(float)
         self.xsize = len(self.xtime) - 1
 
@@ -955,6 +965,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.dlg.exec_()
 
     def load_single_matrix_file(self):
+        self.statusBar().showMessage("Loading file, please be patient...")
         if "xlsx" in self.file_path[-5:]:
             self.mdata = pd.read_excel(self.file_path, index_col=0, header=0)
         else:
@@ -987,6 +998,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
             except:
                 self.popup_read_file()
+            self.statusBar().showMessage("")
 
     def set_default_fitting_range(self):
         self.LEstart.setText("0")
@@ -1032,7 +1044,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         try:
             try:
-                self.mdata = pd.read_csv(self.file_path, index_col=ic, skiprows=sr, header=h, delimiter=l, engine="python")
+                self.mdata = pd.read_csv(self.file_path, index_col=ic, skiprows=sr, header=h, delimiter=l,
+                                         engine="python")
             except:
                 self.mdata = pd.read_excel(self.file_path, index_col=ic, skiprows=sr, header=h)
 
@@ -1186,14 +1199,14 @@ class MainWindow(QtWidgets.QMainWindow):
             self.send_to_Qthread(ww)
 
     def send_to_Qthread(self, w):
-        ## Create a worker object and send function to it
+        # Create a worker object and send function to it
         self.worker = Worker(self.parallel_calculation, w)
 
-        ## Whenever signal exists, send it to plot
+        # Whenever signal exists, send it to plot
         self.worker.signals.progress.connect(self.fitting_progress)
 
         self.threadpool.start(self.worker)
-        self.threadpool.releaseThread()  ##I think this makes it faster over time
+        self.threadpool.releaseThread()  # I think this makes it faster over time
 
     def fitting_end(self):
         self.res_df = self.res_df.reindex(sorted(self.res_df.columns), axis=1)
@@ -1246,11 +1259,12 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.norm_df = norm
 
     def save_fitting_data(self):
-        ## Get folder names
+        # Get folder names
         if self.is_giwaxs:
             fi, le = self.dummy_folderpath_file.rsplit("/", 1)
             if self.start != 0 or self.end != self.xsize:
-                folder = self.dummy_folderpath_file.rsplit("/", 1)[0] + "/Fitting_" + le + "[" + str(self.start) + "-" + str(
+                folder = self.dummy_folderpath_file.rsplit("/", 1)[0] + "/Fitting_" + le + "[" + str(
+                    self.start) + "-" + str(
                     self.end) + "]/"
             else:
                 folder = fi + "/Fitting_" + le + "/"
@@ -1266,11 +1280,11 @@ class MainWindow(QtWidgets.QMainWindow):
         if not os.path.exists(folder):
             os.makedirs(folder)
 
-        ## Start an excel file
+        # Start an excel file
         writer = pd.ExcelWriter(folder + "0_" + name + "_fitting_parameters.xlsx")
         dataF = self.res_df.T
 
-        ## Add data to excel file, making a new worksheet per dataset
+        # Add data to excel file, making a new worksheet per dataset
         if self.is_giwaxs:
             self.get_peak_ratios()
             normF = pd.concat([self.comb_data, self.norm_df], axis=1, join="inner")
@@ -1287,7 +1301,7 @@ class MainWindow(QtWidgets.QMainWindow):
         plt.ioff()
         df = self.res_df.T
         variables = []
-        ##This part cleans the model labels so it can use them generally
+        # This part cleans the model labels so it can use them generally
         for ke in df.keys():
             for mn in self.mod_names:
                 if mn in ke:
@@ -1353,36 +1367,45 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def fitmodel_process(self):
         self.clean_all_fit_fields()
-        # self.read_fitting_range()
+
         self.fitmodel_setup()
         if self.fit_model_bool:
             self.fitmodel_plot()
         else:
             pass
 
+    def trivial(self,x):
+        return 0
+
+    def fix_model_name(self, name, model):
+        model_dict = {'Linear': 'li', 'Polynomial': 'po', 'Exponential': 'ex', 'Gaussian': 'ga',
+                'Lorentzian': 'lo', 'Voigt': 'vo', 'PseudoVoigt': 'pv', 'SkewedVoigt': 'sv',
+                'ExpGaussian': 'eg', 'SkewedGaussian': 'sg', }
+
+        new_name = model_dict[model] + "_" + name
+
+        return new_name
+
+
     def fitmodel_setup(self):  # FITTING PART #TODO make class, when gui created, make instance of class
-        self.is_pero_peak = False  ##Reset value to False
-        bar = int(self.ScrollbarTime.value())  ##Read scrollbar value
+        self.is_pero_peak = False  # Reset value to False
+        bar = int(self.ScrollbarTime.value())  # Read scrollbar value
 
         try:
-            # self._plot_ref.set_xdata(self.pdata.index.values)
-            # self._plot_ref.set_ydata(self.pdata.iloc[:,[bar]].T.values[0])
             y_data = np.array(self.pdata.iloc[:, [bar]].T.values[0])
-            x_data = np.array(self.pdata.index.values)
-            # print("hello")
+            x_data = np.array(self.pdata.index.values) # TODO check why the next is wave and how to unify
         except:
-            # self._plot_ref.set_ydata(self.mdata.iloc[:,[bar]].T.values[0])
             y_data = np.array(self.mdata.iloc[:, [bar]].T.values[0])
             x_data = np.array(self.wave)
 
         # mod_number = 0
-        self.model_mix = []  # TODO Not a list
-        self.pars = []  # TODO this is a dictionary
+        self.model_mix = Model(self.trivial)  # TODO Not a list
+        self.pars = {}
         self.mod_names = []
         self.fit_vals = []
-        mod_name = None
+        model_type = None
 
-        for nn, cb in enumerate(self.combo_mod):
+        for nn, list_name in enumerate(self.combo_mod):
             if nn == 0:
                 try:
                     del self.model_mix
@@ -1392,47 +1415,43 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 pass
 
-            cb = cb[1]
-            if cb.currentText() == "":
+            list_name = list_name[1]
+            if list_name.currentText() == "":
                 pass
 
-            elif cb.currentText() == "Linear":
+            elif list_name.currentText() == "Linear":
                 if len(self.combo_mod[nn][2].text()) > 0:
-                    mod_name = self.combo_mod[nn][2].text() + "_"
+                    model_type = self.combo_mod[nn][2].text() + "_"
                 else:
-                    # cur_name = "Linear"
-                    mod_name = "Linear_" + str(nn + 1) + "_"
+                    model_type = "Linear_" + str(nn + 1) + "_"
 
-                # mod_name = cur_name+"_"+str(nn+1)+"_"
-                curv_mod = LinearModel(prefix=mod_name)
+                first_model = LinearModel(prefix=model_type)
 
                 try:
-                    self.model_mix = self.model_mix + curv_mod
-                    self.pars.update(curv_mod.make_params())
+                    self.model_mix = self.model_mix + first_model
+                    self.pars.update(first_model.make_params())
 
                 except:
-                    self.model_mix = curv_mod
-                    self.pars = curv_mod.guess(y_data, x=x_data)
+                    self.model_mix = first_model
+                    self.pars = first_model.guess(y_data, x=x_data)
 
                 slope = self.constraints[nn][0][0].text().replace(",", ".")
                 interc = self.constraints[nn][0][1].text().replace(",", ".")
 
                 if len(slope) >= 1:
-                    self.pars[mod_name + "slope"].set(value=float(slope))
+                    self.pars[model_type + "slope"].set(value=float(slope))
                 else:
                     pass
                 if len(interc) >= 1:
-                    self.pars[mod_name + "intercept"].set(value=float(interc))
+                    self.pars[model_type + "intercept"].set(value=float(interc))
                 else:
                     pass
 
-                # mod_number += 1
-
-            elif cb.currentText() == "Polynomial":
+            elif list_name.currentText() == "Polynomial":
                 if len(self.combo_mod[nn][2].text()) > 0:
-                    mod_name = self.combo_mod[nn][2].text() + "_"
+                    model_type = self.combo_mod[nn][2].text() + "_"
                 else:
-                    mod_name = "Polynomial_" + str(nn + 1) + "_"
+                    model_type = "Polynomial_" + str(nn + 1) + "_"
 
                 # mod_name = cur_name+"_"+str(nn+1)+"_"
 
@@ -1441,77 +1460,76 @@ class MainWindow(QtWidgets.QMainWindow):
                     deg = 7
                     self.constraints[nn][0][0].setText("7")
 
-                curv_mod = PolynomialModel(prefix=mod_name, degree=int(deg))
+                first_model = PolynomialModel(prefix=model_type, degree=int(deg))
 
                 try:
-                    self.model_mix = self.model_mix + curv_mod
-                    self.pars.update(curv_mod.make_params())
+                    self.model_mix = self.model_mix + first_model
+                    self.pars.update(first_model.make_params())
                 except:
-                    self.model_mix = curv_mod
-                    self.pars = curv_mod.guess(y_data, x=x_data)
+                    self.model_mix = first_model
+                    self.pars = first_model.guess(y_data, x=x_data)
 
 
 
-            elif cb.currentText() == "Exponential":
+            elif list_name.currentText() == "Exponential":
                 if len(self.combo_mod[nn][2].text()) > 0:
-                    mod_name = self.combo_mod[nn][2].text() + "_"
+                    model_type = self.combo_mod[nn][2].text() + "_"
                 else:
-                    mod_name = "Exponential_" + str(nn + 1) + "_"
+                    model_type = "Exponential_" + str(nn + 1) + "_"
 
                 # mod_name = cur_name+"_"+str(nn+1)+"_"
-                curv_mod = ExponentialModel(prefix=mod_name)
+                first_model = ExponentialModel(prefix=model_type)
 
                 try:
-                    self.model_mix = self.model_mix + curv_mod
-                    self.pars.update(curv_mod.make_params())
+                    self.model_mix = self.model_mix + first_model
+                    self.pars.update(first_model.make_params())
                 except:
-                    self.model_mix = curv_mod
-                    self.pars = curv_mod.guess(y_data, x=x_data)
+                    self.model_mix = first_model
+                    self.pars = first_model.guess(y_data, x=x_data)
 
                 amp = self.constraints[nn][0][0].text().replace(",", ".")
                 dec = self.constraints[nn][0][1].text().replace(",", ".")
 
                 if len(amp) >= 1:
-                    self.pars[mod_name + "amplitude"].set(value=float(amp))
+                    self.pars[model_type + "amplitude"].set(value=float(amp))
                 else:
                     pass
                 if len(dec) >= 1:
-                    self.pars[mod_name + "decay"].set(value=float(dec))
+                    self.pars[model_type + "decay"].set(value=float(dec))
                 else:
                     pass
 
-                # mod_number += 1
-
-            # elif cb.currentText() == "Gaussian":
             else:
                 if len(self.combo_mod[nn][2].text()) > 0:
-                    mod_name = self.combo_mod[nn][2].text() + "_"
+                    model_type = self.combo_mod[nn][2].text() + "_"
+                    print("combo_mod " + self.combo_mod[nn][2].text())
                 else:
-                    mod_name = cb.currentText() + "_" + str(nn + 1) + "_"
+                    model_type = list_name.currentText() + "_" + str(nn + 1) + "_"
 
-                if "Lorentzian" in cb.currentText():
-                    curv_mod = LorentzianModel(prefix=mod_name)
-                elif "PseudoVoigt" in cb.currentText():
-                    curv_mod = PseudoVoigtModel(prefix=mod_name)
-                elif "ExpGaussian" in cb.currentText():
-                    curv_mod = ExponentialGaussianModel(prefix=mod_name)
-                elif "SkewedGaussian" in cb.currentText():
-                    curv_mod = SkewedGaussianModel(prefix=mod_name)
-                elif "SkewedVoigt" in cb.currentText():
-                    curv_mod = SkewedVoigtModel(prefix=mod_name)
-                elif "Voigt" in cb.currentText():
-                    curv_mod = VoigtModel(prefix=mod_name)
-                elif "Gaussian" in cb.currentText():
-                    curv_mod = GaussianModel(prefix=mod_name)
+
+                if "Lorentzian" in list_name.currentText():
+                    first_model = LorentzianModel(prefix=model_type)
+                elif "PseudoVoigt" in list_name.currentText():
+                    first_model = PseudoVoigtModel(prefix=model_type)
+                elif "ExpGaussian" in list_name.currentText():
+                    first_model = ExponentialGaussianModel(prefix=model_type)
+                elif "SkewedGaussian" in list_name.currentText():
+                    first_model = SkewedGaussianModel(prefix=model_type)
+                elif "SkewedVoigt" in list_name.currentText():
+                    first_model = SkewedVoigtModel(prefix=model_type)
+                elif "Voigt" in list_name.currentText():
+                    first_model = VoigtModel(prefix=model_type)
+                elif "Gaussian" in list_name.currentText():
+                    first_model = GaussianModel(prefix=model_type)
                 else:
                     print("model error")
 
                 try:
-                    self.model_mix = self.model_mix + curv_mod
-                    self.pars.update(curv_mod.make_params())
+                    self.model_mix = self.model_mix + first_model
+                    self.pars.update(first_model.make_params())
                 except:
-                    self.model_mix = curv_mod
-                    self.pars = curv_mod.guess(y_data, x=x_data)
+                    self.model_mix = first_model
+                    self.pars = first_model.guess(y_data, x=x_data)
 
                 amp = self.constraints[nn][0][0].text().replace(",", ".")
                 cen = self.constraints[nn][0][1].text().replace(",", ".")
@@ -1520,30 +1538,30 @@ class MainWindow(QtWidgets.QMainWindow):
                 if len(amp) >= 1:
                     va = float(amp)
                     if self.LGfit.itemAtPosition(nn * 2 + 1, 10).widget().isChecked():
-                        self.pars[mod_name + "amplitude"].set(value=va, max=0)
+                        self.pars[model_type + "amplitude"].set(value=va, max=0)
                     else:
-                        self.pars[mod_name + "amplitude"].set(value=va, min=0)
+                        self.pars[model_type + "amplitude"].set(value=va, min=0)
                 else:
-                    self.pars[mod_name + "amplitude"].set(min=0)
+                    self.pars[model_type + "amplitude"].set(min=0)
 
-                self.pars[mod_name + "height"].set(max=self.max_int)
+                self.pars[model_type + "height"].set(max=self.max_int)
 
                 if len(cen) >= 1:
                     vv = float(cen)
                     if self.LGfit.itemAtPosition(nn * 2 + 1, 9).widget().isChecked():
-                        self.pars[mod_name + "center"].set(value=vv, vary=False)
+                        self.pars[model_type + "center"].set(value=vv, vary=False)
                     else:
-                        self.pars[mod_name + "center"].set(value=vv, min=vv / 3, max=vv * 3)
+                        self.pars[model_type + "center"].set(value=vv, min=vv / 3, max=vv * 3)
                 else:
                     pass
                 if len(sig) >= 1:
                     vs = float(sig)
-                    self.pars[mod_name + "sigma"].set(value=vs, min=vs / 3, max=vs * 3)
+                    self.pars[model_type + "sigma"].set(value=vs, min=vs / 3, max=vs * 3)
                 else:
                     pass
 
-            if mod_name is not None:
-                self.mod_names.append(mod_name)
+            if model_type is not None:
+                self.mod_names.append(model_type)
                 self.fit_model_bool = True
             else:
                 self.statusBar().showMessage("No fitting models selected", 5000)
@@ -1554,7 +1572,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def fitmodel_plot(self):
         self.statusBar().showMessage("Fitting...   This might take some time")
 
-        bar = int(self.ScrollbarTime.value())  ##Read scrollbar value
+        bar = int(self.ScrollbarTime.value())  # Read scrollbar value
 
         try:
             # self._plot_ref.set_xdata(self.pdata.index.values)
@@ -1571,12 +1589,12 @@ class MainWindow(QtWidgets.QMainWindow):
             self.result = self.model_mix.fit(y_data, self.pars, x=x_data)
             comps = self.result.eval_components(x=x_data)
         except ValueError:
-            self.statusBar().showMessage("### One of the models shows an error ###", 10000)
+            self.statusBar().showMessage("## One of the models shows an error ##", 10000)
 
         self.fit_vals = self.result.values
         self.add_fitting_data_to_gui()
 
-        ##This can be separated into new function (if needed)
+        # This can be separated into new function (if needed)
         if self.plots:
             try:
                 for sp in self.plots:
@@ -1617,25 +1635,25 @@ class MainWindow(QtWidgets.QMainWindow):
         self.statusBar().showMessage("Initial fitting is done", 5000)
 
     def convert_to_eV(self):
-        ## set variables
+        # set variables
         hc = (4.135667696E-15) * (2.999792E8) * 1E9
         eV_conv = hc / self.mdata.index
 
-        ## Make conversion of database and index
+        # Make conversion of database and index
         ev_df = self.mdata.multiply(self.mdata.index.values ** 2, axis="index") / hc
 
         ev_df = ev_df.set_index(eV_conv)
         ev_df.index.names = ["Energy"]
 
-        ## This is for plotting later
+        # This is for plotting later
         axis = np.around(np.linspace(self.wave[0], self.wave[-1], 8), decimals=1)
         self.eV_axis = np.round(hc / axis, 1)
 
-        ## Rename mdata (this is what is always plotted)
+        # Rename mdata (this is what is always plotted)
         self.pdata = ev_df
         self.mdata = ev_df
 
-        ## Update plot
+        # Update plot
         self.extract_data_for_axis()
         self.plot_setup()
         self.bar_update_plots(0)
@@ -1680,22 +1698,23 @@ class MainWindow(QtWidgets.QMainWindow):
         left_b = int(self.left_b.text())
         right_b = left_b + int(self.len_range.text())
 
-        ## Calculate mean of selected range of columns
+        # Calculate mean of selected range of columns
         col_mean = self.mdata.iloc[:, left_b:right_b].mean(axis=1)
-        ## Subtract mean to all dataset
+        # Subtract mean to all dataset
         clean_data = self.mdata.subtract(col_mean, "index")
 
-        ## Rename mdata (this is what is always plotted)
+        # Rename mdata (this is what is always plotted)
         self.pdata = clean_data
         self.mdata = clean_data
 
-        ## Update plot
+        # Update plot
         self.extract_data_for_axis()
         self.plot_setup()
         self.bar_update_plots(0)
         # self.scrollbar_action()
 
     def plot_restart(self):
+        # TODO these are likely savnac, not canvas
         self.canvas.axes.set_xlabel('Time (s)')
         self.canvas.axes.set_ylabel('Wavelength (nm)')
 
@@ -1704,11 +1723,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.axes.grid(True, linestyle='--')
 
     def plot_setup(self):
-        try:
-            fi, le = self.dummy_folderpath_file.rsplit("/", 1)
-            self.setWindowTitle("Spectra Fitter (" + le + ")")
-        except:
-            pass
+        self.setWindowTitle("Spectra Analyzer (" + self.sample_name + ")")
+
         try:
             self.canvas.axes.cla()
             self.savnac.axes.cla()
@@ -1716,9 +1732,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ax2.remove()
         except:
             pass
-        ## First plot
+
+        # First plot
         self._plot_ref, = self.canvas.axes.plot(self.wave, self.mdata.iloc[:, [0]], 'r', label="Experiment")
-        # print(self.wave)
         index_name = self.mdata.index.name
 
         if "0.000" in index_name:
@@ -1743,7 +1759,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.canvas.axes.set_xlabel(axis_name)
             self.t_label = "Time"
 
-        ## Set text fields for time and position
+        # Set text fields for time and position
         self.text_time = self.canvas.axes.text(0.4, 0.9, self.t_label + " 0.0",
                                                horizontalalignment='left', verticalalignment='center',
                                                transform=self.canvas.axes.transAxes)
@@ -1751,14 +1767,14 @@ class MainWindow(QtWidgets.QMainWindow):
                                               horizontalalignment='left', verticalalignment='center',
                                               transform=self.canvas.axes.transAxes)
 
-        self.canvas.axes.set_ylim([self.min_int * 0.9, self.max_int * 1.1])  ## Set y-axis range
-        self.canvas.axes.legend(loc="best")  ## Position legend smartly
+        self.canvas.axes.set_ylim([self.min_int * 0.9, self.max_int * 1.1])  # Set y-axis range
+        self.canvas.axes.legend(loc="best")  # Position legend smartly
 
-        ## Second plot
+        # Second plot
         if self.is_giwaxs:
             self.ax2 = self.savnac.axes.twinx()
 
-        self._plot_heat = self.savnac.axes.pcolorfast(self.mdata)  ## 2D heatplot
+        self._plot_heat = self.savnac.axes.pcolorfast(self.mdata)  # 2D heatplot
         self._plot_vline, = self.savnac.axes.plot([0, 0], [0, self.ysize], 'r')  # Vertical line (Time select)
         self._plot_hline1, = self.savnac.axes.plot([0, self.xsize], [0, 0], 'b')  # Horizontal line1 (Up boundary)
         self._plot_hline2, = self.savnac.axes.plot([0, self.xsize], [0, 0], 'b')  # Horizontal line2 (Down boundary)
@@ -1779,22 +1795,31 @@ class MainWindow(QtWidgets.QMainWindow):
             self.savnac.axes.set_ylabel(axis_name)
 
         # Reset ticks to match data
-        ## Y-axis
+        # Y-axis
         if "Energy" in axis_name:
             self.savnac.axes.set_yticks(np.linspace(0, len(self.wave), 8))
             self.savnac.axes.set_yticklabels(self.eV_axis)
         else:
             self.savnac.axes.set_yticks(np.linspace(0, len(self.wave), 8))
             self.savnac.axes.set_yticklabels(np.around(np.linspace(self.wave[0], self.wave[-1], 8), decimals=1))
-        ## X-axis
+        # X-axis
         self.savnac.axes.set_xticks(np.linspace(0, len(self.xtime), 8))
-        try:  ## In case index is not made of numbers but strings
+        try:  # In case index is not made of numbers but strings
             if "eta" in self.gname:
                 self.savnac.axes.set_xticklabels(np.around(np.linspace(0, self.xtime[-1], 8), decimals=1))
             else:
                 self.savnac.axes.set_xticklabels(np.around(np.linspace(0, self.xtime[-1], 8), decimals=0).astype(int))
         except:
             pass
+
+    def rename_plot_axis(self):
+        # TODO make a popup to set them
+        axis_name = "hola"
+        self.canvas.axes.set_xlabel(axis_name)
+        self.canvas.axes.set_ylabel("Time")
+
+        self.savnac.axes.set_xlabel("Eta (degrees)")
+        self.savnac.axes.set_ylabel(axis_name)
 
     def simplify_number(self, number):
         if number < 0:
@@ -1806,7 +1831,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         return number
 
-    ## Allow to keep center fixed (with checkbox)
+    # Allow to keep center fixed (with checkbox)
     def add_fitting_data_to_gui(self):
         fv = self.fit_vals
         ke = fv.keys()
@@ -1820,7 +1845,7 @@ class MainWindow(QtWidgets.QMainWindow):
             box_name = self.combo_mod[row - 1][1].currentText()
             # print(box_name)
 
-            ## This part sets the lenght of parameters and the number of skipped ones
+            # This part sets the lenght of parameters and the number of skipped ones
             if box_name == "":
                 mod = 1
                 extra = 0
@@ -1848,7 +1873,7 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 pass
 
-            try:  ##  To remove old fitting value on GUI
+            try:  # To remove old fitting value on GUI
                 self.LGfit.itemAtPosition(row * 2, col * 2 + 4).widget().deleteLater()
             except:
                 pass
@@ -1952,7 +1977,7 @@ class MainWindow(QtWidgets.QMainWindow):
         msg.exec_()
 
     def scrollbar_action(self):
-        bar = int(self.ScrollbarTime.value())  ##Read scrollbar value
+        bar = int(self.ScrollbarTime.value())  # Read scrollbar value
         self.bar_update_plots(bar)
 
     def bar_update_plots(self, bar):
