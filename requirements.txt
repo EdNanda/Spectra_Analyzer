@@ -3,5 +3,5 @@ matplotlib
 numpy
 pandas
 PyQt5
-QtRangeSlider
+qtrangeslider
 openpyxl

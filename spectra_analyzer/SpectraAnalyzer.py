@@ -19,10 +19,9 @@ from PyQt5.QtWidgets import QScrollBar, QToolButton, QLabel, QComboBox, QLineEdi
 from PyQt5.QtWidgets import QDialog, QFormLayout, QDialogButtonBox, QAction, QCheckBox, QMessageBox
 from PyQt5.QtCore import Qt, QObject, pyqtSignal, QRunnable, pyqtSlot, QThreadPool
 from PyQt5.QtGui import QFont, QIcon
-# from qtrangeslider import QLabeledRangeSlider
 from qtrangeslider import QRangeSlider
-from qtrangeslider.qtcompat import QtCore
-from qtrangeslider.qtcompat import QtWidgets as QtW
+from qtrangeslider .qtcompat import QtCore
+from qtrangeslider .qtcompat import QtWidgets as QtW
 from lmfit.models import Model, LinearModel, PolynomialModel
 from lmfit.models import ExponentialModel, GaussianModel, LorentzianModel, VoigtModel
 from lmfit.models import PseudoVoigtModel, ExponentialGaussianModel, SkewedGaussianModel, SkewedVoigtModel
@@ -170,8 +169,11 @@ class MainWindow(QtWidgets.QMainWindow):
             {"name": "Set heatplot &color range", "shortcut": "", "callback": self.popup_heatplot_color_range},
         ]
         functions_3 = [
-            {"name": "&Save current matrix dataset", "shortcut": "", "callback": self.save_current_matrix_state},
             {"name": "Save &fitting curves only", "shortcut": "", "callback": self.save_snapshot_data},
+            {"name": "Save &current matrix dataset", "shortcut": "", "callback": self.save_current_matrix_state},
+            {"name": "Save &initial matrix dataset", "shortcut": "", "callback": self.save_data_2DMatrix},
+            {"name": "Save &heatplot as png", "shortcut": "", "callback": self.save_heatplot_giwaxs},
+            {"name": "Rename plots axis", "shortcut": "", "callback": self.rename_plot_axis},
         ]
         otherMenu = mainMenu.addMenu("&Other")
         self.GUI_menu_builder(functions_1, otherMenu)
@@ -240,6 +242,9 @@ class MainWindow(QtWidgets.QMainWindow):
         Lend = QHBoxLayout()
         Lend.addLayout(Lmulti)
         Lend.addItem(horizontSpacer)
+
+        self.maximum_label = QLabel("")
+        self.LGfit.addWidget(self.maximum_label, 100, 0,1,4)
 
         Lfit = QVBoxLayout()
         Lfit.addLayout(self.L1fit)
@@ -311,6 +316,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.is_giwaxs = False
         if self.is_file_selected:
             self.load_single_matrix_file()
+            self.create_mod_data()
             self.extract_data_for_axis()
             self.menu_load_successful()
         else:
@@ -322,12 +328,13 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.is_file_selected:
             self.popup_read_file()
             self.popup_test_file_slow()
+            self.create_mod_data()
             try:
                 self.extract_data_for_axis()
                 self.menu_load_successful()
             except:
                 self.statusBar().showMessage("ERROR: All column names should be numbers in manual mode!!", 5000)
-                print(self.mdata)
+                print(self.init_data)
         else:
             self.statusBar().showMessage("File not selected", 5000)
 
@@ -336,9 +343,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.is_giwaxs = False
         if self.is_file_selected:
             self.pl_folder_gather_data()
+            self.create_mod_data()
             self.extract_data_for_axis()
-            self.save_data_2DMatrix()
-            self.save_heatplot_giwaxs()
             self.menu_load_successful()
         else:
             self.statusBar().showMessage("Folder not selected", 5000)
@@ -348,9 +354,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.select_folder()
         if self.is_file_selected:
             self.popup_giwaxs_w_log()
-            self.extract_giwaxs()
-            self.save_data_2DMatrix()
-            self.save_heatplot_giwaxs()
+            self.create_mod_data()
+            self.extract_data_for_axis()
             self.menu_load_successful()
         else:
             self.statusBar().showMessage("Folder not selected", 5000)
@@ -360,9 +365,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.is_giwaxs = False
         if self.is_file_selected:
             self.separate_xrd_gather_data()
+            self.create_mod_data()
             self.extract_data_for_axis()
-            self.save_data_2DMatrix()  # TODO make it button function
-            self.save_heatplot_giwaxs()  # TODO make it button function
             self.menu_load_successful()
         else:
             self.statusBar().showMessage("Folder not selected", 5000)
@@ -376,21 +380,21 @@ class MainWindow(QtWidgets.QMainWindow):
         self.statusBar().showMessage("")
 
     def save_data_2DMatrix(self):
-        fi, le = self.dummy_folderpath_file.rsplit("/", 1)
-        self.mdata.to_excel(fi + "/0_collected_" + le + ".xlsx")
+        fi, le = self.dummy_folderpath_file.rsplit("/", 1) # TODO remove dummy...
+        self.init_data.to_excel(fi + "/0_collected_" + le + ".xlsx")
 
     def clean_dead_pixel(self):
-        self.mdata.iloc[1421] = self.mdata.iloc[1419:1421].mean()
-        self.mdata.iloc[1423] = self.mdata.iloc[1425:1427].mean()
-        self.mdata.iloc[1422] = self.mdata.iloc[np.r_[1419:1421, 1425:1427]].mean()
+        self.mod_data.iloc[1421] = self.mod_data.iloc[1419:1421].mean()
+        self.mod_data.iloc[1423] = self.mod_data.iloc[1425:1427].mean()
+        self.mod_data.iloc[1422] = self.mod_data.iloc[np.r_[1419:1421, 1425:1427]].mean()
         self.scrollbar_action()
 
     def save_snapshot_data(self):
         self.fitmodel_process()
         bar = int(self.ScrollbarTime.value())  # Read scrollbar value
 
-        x_data = np.array(self.wave)
-        y_data = np.array(self.pdata.iloc[:, [bar]].T.values[0])
+        x_data = np.array(self.yarray)
+        y_data = np.array(self.mod_data.iloc[:, [bar]].T.values[0])
 
         comps = self.result.eval_components(x=x_data)
 
@@ -408,15 +412,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.statusBar().showMessage("Snapshot saved", 5000)
 
     def model_row_add(self):
-        try:
+        if self.grid_count < 14:
             for gc in self.combo_mod[self.grid_count][1:]:
                 gc.setVisible(True)
             self.grid_count += 1
-        except:
-            # TODO: add true/false to avoid overwritting the message
-            self.LGfit.addWidget(QLabel("Reached Maximum"), 100, 0)
+        else:
+            self.maximum_label.setText("Reached Maximum")
 
     def model_row_remove(self):
+        self.maximum_label.setText("")
         if self.grid_count > 0:
             self.grid_count -= 1
             self.combo_mod[self.grid_count][1].setCurrentIndex(0)
@@ -427,12 +431,13 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             pass
 
+    def create_mod_data(self):
+        self.mod_data = self.init_data.copy()
+
     def clean_all_fit_fields(self):
         rows = list(range(self.LGfit.rowCount()))[1:]
         x_arr = [1, 2, 4, 6, 8]  # usable grid coordinates
         y_arr = [h for h in rows if h % 2 == 0]  # odd rows
-
-        # print(self.grid_count)
 
         for yd in y_arr:
             for xd in x_arr:
@@ -440,7 +445,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 try:  # if widget found
                     fieldwid = testmod.widget()
                     if isinstance(fieldwid, QLabel):
-                        # print(fieldwid.text())
                         fieldwid.setText("")  # remove text
                 except:
                     pass
@@ -514,6 +518,7 @@ class MainWindow(QtWidgets.QMainWindow):
             # return
 
     def save_heatplot_giwaxs(self):
+        # TODO check that this works for any curve, not just giwaxs
         fi, le = self.dummy_folderpath_file.rsplit("/", 1)
 
         ticks_n = 10
@@ -558,11 +563,11 @@ class MainWindow(QtWidgets.QMainWindow):
             srt = 0
             for c, ks in enumerate(self.separated):
                 end = srt + ks.shape[0] - 1
-                mat = self.mdata.iloc[:, srt:end]
+                mat = self.mod_data.iloc[:, srt:end]
                 leng = ks.shape[0]
                 temp = ks.DegC
 
-                axs[c].pcolorfast(mat, vmin=min(self.mdata.min()) * 0.9, vmax=max(self.mdata.max()) * 1.1)
+                axs[c].pcolorfast(mat, vmin=min(self.mod_data.min()) * 0.9, vmax=max(self.mod_data.max()) * 1.1)
                 axt = axs[c].twinx()
                 axt.plot(temp, "--m")
                 axt.set_ylim([mnT * 0.9, mxT * 1.05])
@@ -576,8 +581,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
                 if c == 0:
                     axs[0].set_ylabel(r"2$\theta$ (Degree)")
-                    axs[0].set_yticks(np.linspace(0, len(self.wave), 8))
-                    axs[0].set_yticklabels(np.linspace(self.wave[0], self.wave[-1], 8).astype(int))
+                    axs[0].set_yticks(np.linspace(0, len(self.yarray), 8))
+                    axs[0].set_yticklabels(np.linspace(self.yarray[0], self.yarray[-1], 8).astype(int))
 
                 else:
                     pass
@@ -607,7 +612,6 @@ class MainWindow(QtWidgets.QMainWindow):
         except:
             self.savnac.figh.savefig(fi + "/0_heatplot_" + le + ".png", dpi=300)
 
-        # plt.close()
 
     def select_file(self):
         # print("  select_file")
@@ -659,7 +663,6 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.is_file_selected = False
 
-    # TODO always show open file/exp name on title bar
     def popup_giwaxs_w_log(self):
         self.dgiw = QDialog()
         Lopt = QVBoxLayout()
@@ -695,33 +698,29 @@ class MainWindow(QtWidgets.QMainWindow):
         self.giwaxs_gather_data()
 
     def separate_xrd_gather_data(self):
-        # TODO add files using lists or arrays, then convert to pandas
         self.statusBar().showMessage("Loading files, please be patient...")
-        # print("  separate_xrd_gather_data")
         pl_files = sorted(glob(self.folder_path + "*.dat"))
 
         self.dummy_folderpath_file = self.folder_path + self.sample_name
-        # print(self.dummy_folderpath_file)
-        # self.file_path = self.dummy_folderpath_file # TODO this file_path seems wrong, it's missing the extension
+
+        # List to store all dataframes
+        dataframes = []
 
         for counter, file in enumerate(pl_files):
             data = pd.read_csv(file, delimiter="\t", skiprows=4, header=None, names=["2Theta", counter],
                                index_col=False)
+            data.set_index("2Theta", inplace=True)
+            dataframes.append(data)
 
-            if counter == 0:
-                self.mdata = data
+        # Concatenate all dataframes along the columns axis
+        self.init_data = pd.concat(dataframes, axis=1)
 
-            else:
-                self.mdata = self.mdata.join(data.set_index("2Theta"), on="2Theta")
-
-        self.mdata.set_index("2Theta", inplace=True)
         self.statusBar().showMessage("")
 
     def pl_folder_gather_data(self):
         pl_files = sorted(glob(self.folder_path + "\\*.txt"), key=os.path.getmtime)
 
         self.dummy_folderpath_file = self.folder_path + "/" + self.folder_path.split("/")[-1]
-        # TODO clean this folder gfile
         self.file_path = self.dummy_folderpath_file
 
         for counter, file in enumerate(pl_files):
@@ -734,15 +733,15 @@ class MainWindow(QtWidgets.QMainWindow):
 
             if counter == 0:
                 start_t = delta
-                self.mdata = data
+                self.init_data = data
 
             else:
                 curr_t = delta - start_t
                 curr_t = curr_t.total_seconds()
-                self.mdata = self.mdata.join(data.set_index("Wavelength"), on="Wavelength")
-                self.mdata.rename(columns={counter: curr_t})
+                self.init_data = self.init_data.join(data.set_index("Wavelength"), on="Wavelength")
+                self.init_data.rename(columns={counter: curr_t})
 
-        self.mdata.set_index("Wavelength", inplace=True)
+        self.init_data.set_index("Wavelength", inplace=True)
 
     def giwaxs_gather_data(self):
         # This part pre-reads files to find where data start and end
@@ -829,50 +828,50 @@ class MainWindow(QtWidgets.QMainWindow):
             raw_dat.rename(columns={0: "TTh", 1: "m_" + str(counter)}, inplace=True)
 
             if counter == 0:
-                self.mdata = raw_dat
+                self.init_data = raw_dat
             else:
-                self.mdata = self.mdata.join(raw_dat.set_index("TTh"), on="TTh")
+                self.init_data = self.init_data.join(raw_dat.set_index("TTh"), on="TTh")
 
-        self.mdata = self.mdata.set_index("TTh")
+        self.init_data = self.init_data.set_index("TTh")
         # print(self.mdata)
 
         if "eta" in self.dummy_folderpath_file:
-            self.mdata.columns = [combined.eta, combined.DegC]
+            self.init_data.columns = [combined.eta, combined.DegC]
             self.comb_data = combined[["eta", "DegC"]]
         else:
-            self.mdata.columns = [combined.Time, combined.DegC]
+            self.init_data.columns = [combined.Time, combined.DegC]
             self.comb_data = combined[["Time", "DegC"]]
 
-    def extract_giwaxs(self):
+    def extract_data_for_axis(self):
         try:
-            self.xtime = [ik[0] for ik in self.mdata.keys()]
+            self.xtime = [ik[0] for ik in self.mod_data.keys()]
         except:
-            self.xtime = self.mdata.keys().values.astype(float)
+            self.xtime = self.mod_data.keys().values.astype(float)
         self.xsize = len(self.xtime) - 1
 
-        self.max_int = self.mdata.to_numpy().max()
-        self.min_int = self.mdata.to_numpy().min()
+        self.max_int = self.mod_data.to_numpy().max()
+        self.min_int = self.mod_data.to_numpy().min()
 
-        self.wave = self.mdata.index
-        self.ysize = len(self.wave)
+        self.yarray = self.mod_data.index
+        self.ysize = len(self.yarray)
 
         self.range_slider.setMaximum(self.ysize)
         self.range_slider.setValue((0, self.ysize))
         self.set_default_fitting_range()
 
-    def extract_data_for_axis(self):
-        # Extract relevant data
-        self.xtime = self.mdata.keys().astype(float)
-        self.xsize = len(self.xtime) - 1
-
-        fix_arr = np.ma.masked_invalid(self.mdata.to_numpy())
-        self.max_int = fix_arr.max()
-        self.min_int = fix_arr.min()
-
-        self.wave = self.mdata.index
-        self.ysize = len(self.wave)
-        self.range_slider.setMaximum(self.ysize)
-        self.range_slider.setValue((0, self.ysize))
+    # def extract_data_for_axis(self):
+    #     # Extract relevant data
+    #     self.xtime = self.mod_data.keys().astype(float)
+    #     self.xsize = len(self.xtime) - 1
+    #
+    #     fix_arr = np.ma.masked_invalid(self.mod_data.to_numpy())
+    #     self.max_int = fix_arr.max()
+    #     self.min_int = fix_arr.min()
+    #
+    #     self.wave = self.mod_data.index
+    #     self.ysize = len(self.wave)
+    #     self.range_slider.setMaximum(self.ysize)
+    #     self.range_slider.setValue((0, self.ysize))
 
     def popup_info(self):
         dinf = QDialog()
@@ -967,32 +966,32 @@ class MainWindow(QtWidgets.QMainWindow):
     def load_single_matrix_file(self):
         self.statusBar().showMessage("Loading file, please be patient...")
         if "xlsx" in self.file_path[-5:]:
-            self.mdata = pd.read_excel(self.file_path, index_col=0, header=0)
+            self.init_data = pd.read_excel(self.file_path, index_col=0, header=0)
         else:
             try:  # load standard matrix file
-                self.mdata = pd.read_csv(self.file_path, index_col=0, skiprows=None, header=0,
-                                         delimiter="\t", engine="python")
-                if not self.mdata.shape[1] != 0:
+                self.init_data = pd.read_csv(self.file_path, index_col=0, skiprows=None, header=0,
+                                             delimiter="\t", engine="python")
+                if not self.init_data.shape[1] != 0:
                     try:
-                        self.mdata = pd.read_csv(self.file_path, index_col=0, skiprows=21, header=0,
-                                                 delimiter=",", engine="python")
+                        self.init_data = pd.read_csv(self.file_path, index_col=0, skiprows=21, header=0,
+                                                     delimiter=",", engine="python")
                     except:
-                        self.mdata = pd.read_csv(self.file_path, index_col=0, skiprows=22, header=0,
-                                                 delimiter=",", engine="python")
+                        self.init_data = pd.read_csv(self.file_path, index_col=0, skiprows=22, header=0,
+                                                     delimiter=",", engine="python")
                     # When Dark&Bright, do the math to display the raw data properly
-                    if self.mdata.keys()[1] == "Bright spectra":
-                        sd = self.mdata.iloc[:, 2:].subtract(self.mdata["Dark spectra"], axis="index")
-                        bd = self.mdata["Bright spectra"] - self.mdata["Dark spectra"]
+                    if self.init_data.keys()[1] == "Bright spectra":
+                        sd = self.init_data.iloc[:, 2:].subtract(self.init_data["Dark spectra"], axis="index")
+                        bd = self.init_data["Bright spectra"] - self.init_data["Dark spectra"]
                         fn = 1 - sd.divide(bd, axis="index")
 
                         # filter extreme values
                         val = 10  # This is the extreme value
                         fn.values[fn.values > val] = val
                         fn.values[fn.values < -val] = -val
-                        self.mdata = fn
-                    elif self.mdata.keys()[0] == "Dark spectra":
-                        sd = self.mdata.iloc[:, 2:].subtract(self.mdata["Dark spectra"], axis="index")
-                        self.mdata = sd
+                        self.init_data = fn
+                    elif self.init_data.keys()[0] == "Dark spectra":
+                        sd = self.init_data.iloc[:, 2:].subtract(self.init_data["Dark spectra"], axis="index")
+                        self.init_data = sd
                     else:
                         pass
 
@@ -1002,7 +1001,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def set_default_fitting_range(self):
         self.LEstart.setText("0")
-        self.LEend.setText(str(self.mdata.shape[1] - 1))
+        self.LEend.setText(str(self.mod_data.shape[1] - 1))
 
     def read_fitting_range(self):
         self.start = int(self.LEstart.text())
@@ -1010,13 +1009,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def remove_dummy_columns(self):
         non_floats = []
-        for col in self.mdata.columns:
+        for col in self.mod_data.columns:
             try:
                 float(col)
             except:
                 non_floats.append(col)
-        self.mdata = self.mdata.drop(columns=non_floats)
-        self.mdata = self.mdata.drop(columns=self.mdata.columns[-1], axis=1)  # remove last also
+        self.mod_data = self.mod_data.drop(columns=non_floats)
+        self.mod_data = self.mod_data.drop(columns=self.mod_data.columns[-1], axis=1)  # remove last also
         # self.mdata = self.mdata.reindex(sorted(self.mdata.columns), axis=1)
         # print(non_floats)
         # print(self.mdata)
@@ -1044,18 +1043,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
         try:
             try:
-                self.mdata = pd.read_csv(self.file_path, index_col=ic, skiprows=sr, header=h, delimiter=l,
-                                         engine="python")
+                self.init_data = pd.read_csv(self.file_path, index_col=ic, skiprows=sr, header=h, delimiter=l,
+                                             engine="python")
             except:
-                self.mdata = pd.read_excel(self.file_path, index_col=ic, skiprows=sr, header=h)
+                self.init_data = pd.read_excel(self.file_path, index_col=ic, skiprows=sr, header=h)
 
             if remove:
-                self.mdata.drop(self.mdata.columns[rem], axis=1, inplace=True)
+                self.init_data.drop(self.init_data.columns[rem], axis=1, inplace=True)
 
             self.remove_dummy_columns()
 
-            self.QFL.addRow(QLabel("Headers:"), QLabel(str("  ".join(self.mdata.keys().values[:5]))))
-            self.QFL.addRow(QLabel("First line:"), QLabel(str("  ".join(self.mdata.head(1).values[0][:5].astype(str)))))
+            self.QFL.addRow(QLabel("Headers:"), QLabel(str("  ".join(self.init_data.keys().values[:5]))))
+            self.QFL.addRow(QLabel("First line:"), QLabel(str("  ".join(self.init_data.head(1).values[0][:5].astype(str)))))
             self.success = True
         except:
             self.QFL.addRow(QLabel("Something went wrong, please try again."))
@@ -1294,7 +1293,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         dataF.to_excel(writer, index=True, sheet_name="Fitting")
 
-        writer.save()
+        # writer.save()
+        writer.close()
         self.plot_fitting_previews(folder)
 
     def plot_fitting_previews(self, folder):
@@ -1343,16 +1343,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def parallel_calculation(self, w, progress_callback):
 
-        try:
-            # self._plot_ref.set_xdata(self.pdata.index.values)
-            # self._plot_ref.set_ydata(self.pdata.iloc[:,[bar]].T.values[0])
-            ydata = np.array(self.pdata.iloc[:, w].values)
-            xdata = np.array(self.pdata.index.values)
-            # print("hello")
-        except:
-            # self._plot_ref.set_ydata(self.mdata.iloc[:,[bar]].T.values[0])
-            xdata = np.array(self.wave)
-            ydata = np.array(self.mdata.iloc[:, w].values)
+        # try:
+        ydata = np.array(self.mod_data.iloc[:, w].values)
+        xdata = np.array(self.mod_data.index.values)
+        # except:
+        #     xdata = np.array(self.wave)
+        #     ydata = np.array(self.init_data.iloc[:, w].values)
 
         result = self.model_mix.fit(ydata, self.pars, x=xdata)
         rsqrd = 1 - result.redchi / np.var(ydata, ddof=2)
@@ -1374,7 +1370,7 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             pass
 
-    def trivial(self,x):
+    def trivial(self, x):
         return 0
 
     def fix_model_name(self, name, model):
@@ -1391,15 +1387,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.is_pero_peak = False  # Reset value to False
         bar = int(self.ScrollbarTime.value())  # Read scrollbar value
 
-        try:
-            y_data = np.array(self.pdata.iloc[:, [bar]].T.values[0])
-            x_data = np.array(self.pdata.index.values) # TODO check why the next is wave and how to unify
-        except:
-            y_data = np.array(self.mdata.iloc[:, [bar]].T.values[0])
-            x_data = np.array(self.wave)
+        # try:
+        y_data = np.array(self.mod_data.iloc[:, [bar]].T.values[0])
+        x_data = np.array(self.mod_data.index.values)
+        # x_data = np.array(self.wave)
+        # except:
+        #     y_data = np.array(self.init_data.iloc[:, [bar]].T.values[0])
+        #     x_data = np.array(self.wave)
 
         # mod_number = 0
-        self.model_mix = Model(self.trivial)  # TODO Not a list
+        self.model_mix = Model(self.trivial)
         self.pars = {}
         self.mod_names = []
         self.fit_vals = []
@@ -1574,16 +1571,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
         bar = int(self.ScrollbarTime.value())  # Read scrollbar value
 
-        try:
-            # self._plot_ref.set_xdata(self.pdata.index.values)
-            # self._plot_ref.set_ydata(self.pdata.iloc[:,[bar]].T.values[0])
-            y_data = np.array(self.pdata.iloc[:, [bar]].T.values[0])
-            x_data = np.array(self.pdata.index.values)
-            # print("hello")
-        except:
-            # self._plot_ref.set_ydata(self.mdata.iloc[:,[bar]].T.values[0])
-            y_data = np.array(self.mdata.iloc[:, [bar]].T.values[0])
-            x_data = np.array(self.wave)
+        # try:
+        y_data = np.array(self.mod_data.iloc[:, [bar]].T.values[0])
+        x_data = np.array(self.mod_data.index.values)
+        # except:
+        #     y_data = np.array(self.init_data.iloc[:, [bar]].T.values[0])
+        #     x_data = np.array(self.wave)
 
         try:
             self.result = self.model_mix.fit(y_data, self.pars, x=x_data)
@@ -1637,21 +1630,20 @@ class MainWindow(QtWidgets.QMainWindow):
     def convert_to_eV(self):
         # set variables
         hc = (4.135667696E-15) * (2.999792E8) * 1E9
-        eV_conv = hc / self.mdata.index
+        eV_conv = hc / self.mod_data.index
 
         # Make conversion of database and index
-        ev_df = self.mdata.multiply(self.mdata.index.values ** 2, axis="index") / hc
+        ev_df = self.mod_data.multiply(self.mod_data.index.values ** 2, axis="index") / hc
 
         ev_df = ev_df.set_index(eV_conv)
         ev_df.index.names = ["Energy"]
 
         # This is for plotting later
-        axis = np.around(np.linspace(self.wave[0], self.wave[-1], 8), decimals=1)
+        axis = np.around(np.linspace(self.yarray[0], self.yarray[-1], 8), decimals=1)
         self.eV_axis = np.round(hc / axis, 1)
 
         # Rename mdata (this is what is always plotted)
-        self.pdata = ev_df
-        self.mdata = ev_df
+        self.mod_data = ev_df
 
         # Update plot
         self.extract_data_for_axis()
@@ -1699,13 +1691,13 @@ class MainWindow(QtWidgets.QMainWindow):
         right_b = left_b + int(self.len_range.text())
 
         # Calculate mean of selected range of columns
-        col_mean = self.mdata.iloc[:, left_b:right_b].mean(axis=1)
+        col_mean = self.init_data.iloc[:, left_b:right_b].mean(axis=1)
         # Subtract mean to all dataset
-        clean_data = self.mdata.subtract(col_mean, "index")
-
+        clean_data = self.init_data.subtract(col_mean, "index")
         # Rename mdata (this is what is always plotted)
-        self.pdata = clean_data
-        self.mdata = clean_data
+        self.init_data = clean_data
+        self.create_mod_data()
+        # self.init_data = clean_data
 
         # Update plot
         self.extract_data_for_axis()
@@ -1714,9 +1706,8 @@ class MainWindow(QtWidgets.QMainWindow):
         # self.scrollbar_action()
 
     def plot_restart(self):
-        # TODO these are likely savnac, not canvas
-        self.canvas.axes.set_xlabel('Time (s)')
-        self.canvas.axes.set_ylabel('Wavelength (nm)')
+        self.savnac.axes.set_xlabel('Time (s)')
+        self.savnac.axes.set_ylabel('Wavelength (nm)')
 
         self.canvas.axes.set_xlabel('Wavelength (nm)')
         self.canvas.axes.set_ylabel('Intensity (a.u.)')
@@ -1734,8 +1725,8 @@ class MainWindow(QtWidgets.QMainWindow):
             pass
 
         # First plot
-        self._plot_ref, = self.canvas.axes.plot(self.wave, self.mdata.iloc[:, [0]], 'r', label="Experiment")
-        index_name = self.mdata.index.name
+        self._plot_ref, = self.canvas.axes.plot(self.yarray, self.mod_data.iloc[:, [0]], 'r', label="Experiment")
+        index_name = self.mod_data.index.name
 
         if "0.000" in index_name:
             axis_name = "Wavelength (nm)"
@@ -1774,7 +1765,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.is_giwaxs:
             self.ax2 = self.savnac.axes.twinx()
 
-        self._plot_heat = self.savnac.axes.pcolorfast(self.mdata)  # 2D heatplot
+        self._plot_heat = self.savnac.axes.pcolorfast(self.mod_data)  # 2D heatplot
         self._plot_vline, = self.savnac.axes.plot([0, 0], [0, self.ysize], 'r')  # Vertical line (Time select)
         self._plot_hline1, = self.savnac.axes.plot([0, self.xsize], [0, 0], 'b')  # Horizontal line1 (Up boundary)
         self._plot_hline2, = self.savnac.axes.plot([0, self.xsize], [0, 0], 'b')  # Horizontal line2 (Down boundary)
@@ -1785,7 +1776,7 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 self.savnac.axes.set_xlabel("Time (seconds)")
             self.savnac.axes.set_ylabel(axis_name)
-            tempe = [ik[1] for ik in self.mdata.keys()]
+            tempe = [ik[1] for ik in self.mod_data.keys()]
             self.ax2.plot(range(len(self.xtime)), tempe, "--m")
             self.ax2.set_ylabel("Temperature (°C)", color="m")  #
             self.ax2.set_ylim([min(tempe) * 0.9, max(tempe) * 1.1])
@@ -1797,11 +1788,11 @@ class MainWindow(QtWidgets.QMainWindow):
         # Reset ticks to match data
         # Y-axis
         if "Energy" in axis_name:
-            self.savnac.axes.set_yticks(np.linspace(0, len(self.wave), 8))
+            self.savnac.axes.set_yticks(np.linspace(0, len(self.yarray), 8))
             self.savnac.axes.set_yticklabels(self.eV_axis)
         else:
-            self.savnac.axes.set_yticks(np.linspace(0, len(self.wave), 8))
-            self.savnac.axes.set_yticklabels(np.around(np.linspace(self.wave[0], self.wave[-1], 8), decimals=1))
+            self.savnac.axes.set_yticks(np.linspace(0, len(self.yarray), 8))
+            self.savnac.axes.set_yticklabels(np.around(np.linspace(self.yarray[0], self.yarray[-1], 8), decimals=1))
         # X-axis
         self.savnac.axes.set_xticks(np.linspace(0, len(self.xtime), 8))
         try:  # In case index is not made of numbers but strings
@@ -1813,13 +1804,50 @@ class MainWindow(QtWidgets.QMainWindow):
             pass
 
     def rename_plot_axis(self):
-        # TODO make a popup to set them
-        axis_name = "hola"
-        self.canvas.axes.set_xlabel(axis_name)
-        self.canvas.axes.set_ylabel("Time")
+        self.dgiw = QDialog()
+        layout = QVBoxLayout()
 
-        self.savnac.axes.set_xlabel("Eta (degrees)")
-        self.savnac.axes.set_ylabel(axis_name)
+        form_lay = QFormLayout()
+
+        axis_labels = [QLineEdit(),QLineEdit(),QLineEdit(),QLineEdit()]
+
+        form_lay.addRow("Plot X-label",axis_labels[0])
+        form_lay.addRow("Plot Y-label", axis_labels[1])
+        form_lay.addRow("Heatmap X-label", axis_labels[2])
+        form_lay.addRow("Heatmap Y-label", axis_labels[3])
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(lambda: self.rename_accept(axis_labels))
+        buttons.rejected.connect(self.rename_close)
+
+        layout.addLayout(form_lay)
+        layout.addWidget(buttons)
+
+        self.dgiw.setLayout(layout)
+        self.dgiw.setWindowTitle('Rename axis')
+        self.dgiw.setWindowModality(Qt.ApplicationModal)
+        self.dgiw.exec_()
+
+    def rename_close(self):
+        self.dgiw.close()
+
+    def rename_accept(self, labels):
+        for cl, lab in enumerate(labels):
+            if lab != "":
+                if cl == 0:
+                    self.canvas.axes.set_xlabel(labels[cl].text())
+                elif cl == 1:
+                    self.canvas.axes.set_ylabel(labels[cl].text())
+                elif cl == 2:
+                    self.savnac.axes.set_xlabel(labels[cl].text())
+                else:
+                    self.savnac.axes.set_ylabel(labels[cl].text())
+        self.canvas.draw_idle()
+        self.savnac.draw_idle()
+        self.dgiw.close()
+
+    def reject(self):
+        return None
 
     def simplify_number(self, number):
         if number < 0:
@@ -1899,8 +1927,8 @@ class MainWindow(QtWidgets.QMainWindow):
         Tempt = QLabel("\n")
         Lopt.addWidget(Tempt)
 
-        max_val = round(self.mdata.to_numpy().max(), 2)
-        min_val = round(self.mdata.to_numpy().min(), 2)
+        max_val = round(self.mod_data.to_numpy().max(), 2)
+        min_val = round(self.mod_data.to_numpy().min(), 2)
 
         self.cb_max = QLineEdit()
         self.cb_max.setFixedWidth(100)
@@ -1938,7 +1966,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self._plot_hline1.set_ydata([sli1, sli1])
             self._plot_hline2.set_ydata([sli2, sli2])
 
-            self.pdata = self.mdata.iloc[sli1:sli2 + 1]
+            self.mod_data = self.mod_data.iloc[sli1:sli2 + 1]
 
             self.scrollbar_action()
         except:
@@ -1955,16 +1983,16 @@ class MainWindow(QtWidgets.QMainWindow):
             QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', directory=fi,
                                                   filter="CSV (*.csv) ;; Excel (*.xlsx)")[0]
 
-        try:
-            if ".xlsx" in filename:
-                self.pdata.to_excel(filename)
-            else:
-                self.pdata.to_csv(filename)
-        except:
-            if ".xlsx" in filename:
-                self.mdata.to_excel(filename)
-            else:
-                self.mdata.to_csv(filename)
+        # try:
+        if ".xlsx" in filename:
+            self.mod_data.to_excel(filename)
+        else:
+            self.mod_data.to_csv(filename)
+        # except:
+        #     if ".xlsx" in filename:
+        #         self.init_data.to_excel(filename)
+        #     else:
+        #         self.init_data.to_csv(filename)
 
         self.statusBar().showMessage("File saved!", 5000)
 
@@ -1981,12 +2009,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.bar_update_plots(bar)
 
     def bar_update_plots(self, bar):
-        try:
-            self._plot_ref.set_xdata(self.pdata.index.values)
-            self._plot_ref.set_ydata(self.pdata.iloc[:, [bar]].T.values[0])
-            # print("hello")
-        except:
-            self._plot_ref.set_ydata(self.mdata.iloc[:, [bar]].T.values[0])
+        # try:
+        self._plot_ref.set_xdata(self.mod_data.index.values)
+        self._plot_ref.set_ydata(self.mod_data.iloc[:, [bar]].T.values[0])
+        # except:
+        #     self._plot_ref.set_ydata(self.init_data.iloc[:, [bar]].T.values[0])
         try:
             time = str(round(float(self.xtime[bar]), 1))
         except:
