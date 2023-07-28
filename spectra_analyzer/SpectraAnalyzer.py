@@ -96,7 +96,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # Create a placeholder widget to hold our toolbar and canvas.
         self.grid_count = 0
         self.mnm = 14  # Max number of models
-        self.combo_mod = []
+        self.model_combobox = []
         self.plots = []
         self.models = ["", "Linear", "Polynomial", "Exponential", "Gaussian",
                        "Lorentzian", "Voigt", "PseudoVoigt", "SkewedVoigt",
@@ -294,7 +294,7 @@ class MainWindow(QtWidgets.QMainWindow):
         for i in range(self.mnm):
             self.constraints.append([])
         self.fw = 46  # width of QLineEdit fields
-        for nn, cb in enumerate(self.combo_mod):
+        for nn, cb in enumerate(self.model_combobox):
             try:
                 cb[1].currentTextChanged.connect(partial(self.make_ComboBox_fields, cb, nn))
                 cb[1].setFixedWidth(100)
@@ -413,7 +413,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def model_row_add(self):
         if self.grid_count < 14:
-            for gc in self.combo_mod[self.grid_count][1:]:
+            for gc in self.model_combobox[self.grid_count][1:]:
                 gc.setVisible(True)
             self.grid_count += 1
         else:
@@ -423,8 +423,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.maximum_label.setText("")
         if self.grid_count > 0:
             self.grid_count -= 1
-            self.combo_mod[self.grid_count][1].setCurrentIndex(0)
-            for gc in self.combo_mod[self.grid_count][1:]:
+            self.model_combobox[self.grid_count][1].setCurrentIndex(0)
+            for gc in self.model_combobox[self.grid_count][1:]:
                 gc.setVisible(False)
 
             self.clean_all_fit_fields()
@@ -500,7 +500,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 for cr, row in enumerate(reader):
                     if len(row) > 1:
                         self.grid_count += 1
-                        for gc in self.combo_mod[cr][1:]:
+                        for gc in self.model_combobox[cr][1:]:
                             gc.setVisible(True)
                         for ce, ele in enumerate(row[:-1]):
                             field = self.LGfit.itemAtPosition(cr * 2 + 1, x_arr[ce])
@@ -859,20 +859,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.range_slider.setValue((0, self.ysize))
         self.set_default_fitting_range()
 
-    # def extract_data_for_axis(self):
-    #     # Extract relevant data
-    #     self.xtime = self.mod_data.keys().astype(float)
-    #     self.xsize = len(self.xtime) - 1
-    #
-    #     fix_arr = np.ma.masked_invalid(self.mod_data.to_numpy())
-    #     self.max_int = fix_arr.max()
-    #     self.min_int = fix_arr.min()
-    #
-    #     self.wave = self.mod_data.index
-    #     self.ysize = len(self.wave)
-    #     self.range_slider.setMaximum(self.ysize)
-    #     self.range_slider.setValue((0, self.ysize))
-
     def popup_info(self):
         dinf = QDialog()
         Ltext = QVBoxLayout()
@@ -1017,8 +1003,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.mod_data = self.mod_data.drop(columns=non_floats)
         self.mod_data = self.mod_data.drop(columns=self.mod_data.columns[-1], axis=1)  # remove last also
         # self.mdata = self.mdata.reindex(sorted(self.mdata.columns), axis=1)
-        # print(non_floats)
-        # print(self.mdata)
 
     def popup_test_file_slow(self):
         self.success = False
@@ -1073,7 +1057,7 @@ class MainWindow(QtWidgets.QMainWindow):
             combobool = False
 
             combobox = QComboBox()
-            combobox.addItems(self.models)
+            combobox.addItems(self.models) # This creates the menu of the combobox
             combobox.setVisible(False)
 
             comboName = QLineEdit()
@@ -1091,15 +1075,18 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.LGfit.addWidget(QLabel("  fix\ncenter"), 0, 9)
                 self.LGfit.addWidget(QLabel("  neg."), 0, 10)
 
-            self.LGfit.addWidget(comboNumber, ii * 2 + 1, 0)
-            self.LGfit.addWidget(comboName, ii * 2 + 1, 1)
-            self.LGfit.addWidget(combobox, ii * 2 + 1, 2)
-            self.combo_mod.append([combobool, combobox, comboName, comboNumber])
+            self.LGfit.addWidget(comboNumber, ii + 1, 0)
+            self.LGfit.addWidget(comboName, ii + 1, 1)
+            self.LGfit.addWidget(combobox, ii + 1, 2)
+            # self.LGfit.addWidget(comboNumber, ii * 2 + 1, 0)
+            # self.LGfit.addWidget(comboName, ii * 2 + 1, 1)
+            # self.LGfit.addWidget(combobox, ii * 2 + 1, 2)
+            self.model_combobox.append([combobool, combobox, comboName, comboNumber])
 
     def make_ComboBox_fields(self, cb, ii):
         single_cnst = []
         if cb[0]:
-            for i in reversed(range(1, self.mnm)):
+            for i in reversed(range(1, self.mnm)):# todo loop might not be needed
                 try:
                     self.LGfit.itemAtPosition(ii * 2 + 1, i + 2).widget().deleteLater()
                 except:
@@ -1247,10 +1234,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.norm_df = None
         for ak in Akeys:
             if m_key in ak:
-                # print(m_key)
                 continue
             else:
-                # print(ak)
                 norm = pd.DataFrame({ak: df[ak] / df[m_key + "_" + sk].values})
                 try:
                     self.norm_df = pd.concat([self.norm_df, norm], axis=1, join="inner")
@@ -1274,7 +1259,6 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 folder = self.file_path.rsplit("/", 1)[0] + "/Fitting/"
             name = self.file_path.rsplit("/", 2)[1]
-        # print(folder)
 
         if not os.path.exists(folder):
             os.makedirs(folder)
@@ -1293,7 +1277,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         dataF.to_excel(writer, index=True, sheet_name="Fitting")
 
-        # writer.save()
         writer.close()
         self.plot_fitting_previews(folder)
 
@@ -1338,17 +1321,12 @@ class MainWindow(QtWidgets.QMainWindow):
             plt.savefig(folder + "0_preview_fit_0_" + fn + ".png", dpi=300, bbox_inches='tight')
         else:
             plt.savefig(folder + "0_preview_fit_" + fn + ".png", dpi=300, bbox_inches='tight')
-        # plt.show()
         plt.close()
 
     def parallel_calculation(self, w, progress_callback):
-
-        # try:
+        # TODO fix x-ydata to what is calculated before e.g. self.wave
         ydata = np.array(self.mod_data.iloc[:, w].values)
         xdata = np.array(self.mod_data.index.values)
-        # except:
-        #     xdata = np.array(self.wave)
-        #     ydata = np.array(self.init_data.iloc[:, w].values)
 
         result = self.model_mix.fit(ydata, self.pars, x=xdata)
         rsqrd = 1 - result.redchi / np.var(ydata, ddof=2)
@@ -1387,22 +1365,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.is_pero_peak = False  # Reset value to False
         bar = int(self.ScrollbarTime.value())  # Read scrollbar value
 
-        # try:
         y_data = np.array(self.mod_data.iloc[:, [bar]].T.values[0])
         x_data = np.array(self.mod_data.index.values)
-        # x_data = np.array(self.wave)
-        # except:
-        #     y_data = np.array(self.init_data.iloc[:, [bar]].T.values[0])
-        #     x_data = np.array(self.wave)
 
-        # mod_number = 0
         self.model_mix = Model(self.trivial)
         self.pars = {}
         self.mod_names = []
         self.fit_vals = []
         model_type = None
 
-        for nn, list_name in enumerate(self.combo_mod):
+        for nn, list_name in enumerate(self.model_combobox):
             if nn == 0:
                 try:
                     del self.model_mix
@@ -1411,14 +1383,14 @@ class MainWindow(QtWidgets.QMainWindow):
                     pass
             else:
                 pass
-
+            # TODO use renaming function fix_model_name
             list_name = list_name[1]
             if list_name.currentText() == "":
                 pass
 
             elif list_name.currentText() == "Linear":
-                if len(self.combo_mod[nn][2].text()) > 0:
-                    model_type = self.combo_mod[nn][2].text() + "_"
+                if len(self.model_combobox[nn][2].text()) > 0:
+                    model_type = self.model_combobox[nn][2].text() + "_"
                 else:
                     model_type = "Linear_" + str(nn + 1) + "_"
 
@@ -1445,12 +1417,10 @@ class MainWindow(QtWidgets.QMainWindow):
                     pass
 
             elif list_name.currentText() == "Polynomial":
-                if len(self.combo_mod[nn][2].text()) > 0:
-                    model_type = self.combo_mod[nn][2].text() + "_"
+                if len(self.model_combobox[nn][2].text()) > 0:
+                    model_type = self.model_combobox[nn][2].text() + "_"
                 else:
                     model_type = "Polynomial_" + str(nn + 1) + "_"
-
-                # mod_name = cur_name+"_"+str(nn+1)+"_"
 
                 deg = self.constraints[nn][0][0].text()
                 if int(deg) > 7:
@@ -1469,12 +1439,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
             elif list_name.currentText() == "Exponential":
-                if len(self.combo_mod[nn][2].text()) > 0:
-                    model_type = self.combo_mod[nn][2].text() + "_"
+                if len(self.model_combobox[nn][2].text()) > 0:
+                    model_type = self.model_combobox[nn][2].text() + "_"
                 else:
                     model_type = "Exponential_" + str(nn + 1) + "_"
 
-                # mod_name = cur_name+"_"+str(nn+1)+"_"
                 first_model = ExponentialModel(prefix=model_type)
 
                 try:
@@ -1497,9 +1466,9 @@ class MainWindow(QtWidgets.QMainWindow):
                     pass
 
             else:
-                if len(self.combo_mod[nn][2].text()) > 0:
-                    model_type = self.combo_mod[nn][2].text() + "_"
-                    print("combo_mod " + self.combo_mod[nn][2].text())
+                if len(self.model_combobox[nn][2].text()) > 0:
+                    model_type = self.model_combobox[nn][2].text() + "_"
+                    print("combo_mod " + self.model_combobox[nn][2].text())
                 else:
                     model_type = list_name.currentText() + "_" + str(nn + 1) + "_"
 
@@ -1563,20 +1532,14 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 self.statusBar().showMessage("No fitting models selected", 5000)
                 self.fit_model_bool = False
-                # raise Exception("No fitting models")
-                # return
 
     def fitmodel_plot(self):
         self.statusBar().showMessage("Fitting...   This might take some time")
 
         bar = int(self.ScrollbarTime.value())  # Read scrollbar value
 
-        # try:
         y_data = np.array(self.mod_data.iloc[:, [bar]].T.values[0])
         x_data = np.array(self.mod_data.index.values)
-        # except:
-        #     y_data = np.array(self.init_data.iloc[:, [bar]].T.values[0])
-        #     x_data = np.array(self.wave)
 
         try:
             self.result = self.model_mix.fit(y_data, self.pars, x=x_data)
@@ -1585,7 +1548,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.statusBar().showMessage("## One of the models shows an error ##", 10000)
 
         self.fit_vals = self.result.values
-        self.add_fitting_data_to_gui()
+        self.add_fitting_pars_to_entryfields()
 
         # This can be separated into new function (if needed)
         if self.plots:
@@ -1607,8 +1570,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.best_fit = self.canvas.axes.plot(x_data, self.result.best_fit, '-.b', label='Best fit')
 
         try:
-            # self.LGfit.itemAtPosition(0,1).widget().deleteLater()
-            # self.LGfit.itemAtPosition(0,2).widget().deleteLater()
             self.LR.setText("")
             self.Lvalue.setText("")
         except:
@@ -1618,8 +1579,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         r2_label = str(np.round(self.rsquared, 4))
 
-        # self.LGfit.addWidget(QLabel(" R² = "),0,1)
-        # self.LGfit.addWidget(QLabel(r2_label),0,2)
         self.LR.setText(" R² = ")
         self.Lvalue.setText(r2_label)
 
@@ -1714,6 +1673,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.axes.grid(True, linestyle='--')
 
     def plot_setup(self):
+        # TODO fix x axis of heatplot
         self.setWindowTitle("Spectra Analyzer (" + self.sample_name + ")")
 
         try:
@@ -1858,8 +1818,64 @@ class MainWindow(QtWidgets.QMainWindow):
             number = int(number)
 
         return number
-
+# TODO add quick guide on how to use it
     # Allow to keep center fixed (with checkbox)
+    def add_fitting_pars_to_entryfields(self):
+        # TODO add fitting data to fields
+        x_arr = [4, 6, 8]  # usable grid coordinates
+        fit_vals = self.fit_vals
+        parameters = fit_vals.keys()
+
+        for mc, list_name in enumerate(self.model_combobox):
+            list_name = list_name[1]
+
+            if list_name.currentText() == "":
+                pass
+            elif list_name.currentText() == "Polynomial":
+                # read polynomial number
+                pass
+            elif list_name.currentText() == "Linear":
+                variables = ["slope", "intercept"]
+                self.add_fitting_pars_process(parameters, variables, list_name, fit_vals)
+            elif list_name.currentText() == "Exponential":
+                variables = ["amplitude", "decay"]
+                self.add_fitting_pars_process(parameters, variables, list_name, fit_vals)
+            else:
+                variables = ["amplitude", "center", "sigma"]
+                self.add_fitting_pars_process(parameters, variables, list_name, fit_vals)
+
+    def add_fitting_pars_process(self,parameters, variables, list_name, fit_vals):
+        for pars in parameters:
+            if list_name.currentText() in pars:
+                for va in variables:
+                    if va in pars:
+                        print(pars, fit_vals[pars])
+
+        # test = []
+        # for p in parameters: # Get list of models using the assigned name
+        #     test.append(p.rsplit("_",1)[0])
+        # print(set(test))
+
+        # with open(filename[0], "r") as fd:
+        #     reader = csv.reader(fd, delimiter="\t")
+
+        #
+        # for cr, row in enumerate(reader):
+        #     if len(row) > 1:
+        #         self.grid_count += 1
+        #         for ce, ele in enumerate(row[:-1]):
+        #             field = self.LGfit.itemAtPosition(cr + 1, x_arr[ce])
+        #             try:
+        #                 fieldwid = field.widget()
+        #                 try:
+        #                     fieldwid.setText(ele)
+        #                 except:
+        #                     fieldwid.setCurrentText(ele)
+        #             except:
+        #                 pass
+
+
+
     def add_fitting_data_to_gui(self):
         fv = self.fit_vals
         ke = fv.keys()
@@ -1870,24 +1886,22 @@ class MainWindow(QtWidgets.QMainWindow):
         col = 0
         extra = 0
         for cc, key in enumerate(ke):
-            box_name = self.combo_mod[row - 1][1].currentText()
-            # print(box_name)
+            model_name = self.model_combobox[row - 1][1].currentText()
 
             # This part sets the lenght of parameters and the number of skipped ones
-            if box_name == "":
+            if model_name == "":
                 mod = 1
                 extra = 0
-            elif box_name == "Polynomial":
-                # print(self.constraints[row-1][0][0].text())
+            elif model_name == "Polynomial":
                 mod = int(self.constraints[row - 1][0][0].text()) + 2
                 extra = int(self.constraints[row - 1][0][0].text()) + 2
-            elif box_name in ["Linear", "Exponential"]:
+            elif model_name in ["Linear", "Exponential"]:
                 mod = 3
                 extra = 0
-            elif box_name in ["Gaussian", "Lorentzian"]:
+            elif model_name in ["Gaussian", "Lorentzian"]:
                 mod = 6
                 extra = 2
-            elif box_name in ["PseudoVoigt", "ExpGaussian", "SkewedGaussian", "SkewedVoigt", "Voigt"]:
+            elif model_name in ["PseudoVoigt", "ExpGaussian", "SkewedGaussian", "SkewedVoigt", "Voigt"]:
                 mod = 7
                 extra = 3
             else:
@@ -1983,16 +1997,10 @@ class MainWindow(QtWidgets.QMainWindow):
             QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', directory=fi,
                                                   filter="CSV (*.csv) ;; Excel (*.xlsx)")[0]
 
-        # try:
         if ".xlsx" in filename:
             self.mod_data.to_excel(filename)
         else:
             self.mod_data.to_csv(filename)
-        # except:
-        #     if ".xlsx" in filename:
-        #         self.init_data.to_excel(filename)
-        #     else:
-        #         self.init_data.to_csv(filename)
 
         self.statusBar().showMessage("File saved!", 5000)
 
@@ -2009,11 +2017,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.bar_update_plots(bar)
 
     def bar_update_plots(self, bar):
-        # try:
         self._plot_ref.set_xdata(self.mod_data.index.values)
         self._plot_ref.set_ydata(self.mod_data.iloc[:, [bar]].T.values[0])
-        # except:
-        #     self._plot_ref.set_ydata(self.init_data.iloc[:, [bar]].T.values[0])
+
         try:
             time = str(round(float(self.xtime[bar]), 1))
         except:
