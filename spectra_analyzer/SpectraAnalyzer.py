@@ -21,7 +21,7 @@ from PyQt5.QtCore import Qt, QObject, pyqtSignal, QRunnable, pyqtSlot, QThreadPo
 from PyQt5.QtGui import QFont, QIcon
 from qtrangeslider import QRangeSlider
 from qtrangeslider .qtcompat import QtCore
-from qtrangeslider .qtcompat import QtWidgets as QtW
+#from QtRangeSlider .qtcompat import QtWidgets as QtW
 from lmfit.models import Model, LinearModel, PolynomialModel
 from lmfit.models import ExponentialModel, GaussianModel, LorentzianModel, VoigtModel
 from lmfit.models import PseudoVoigtModel, ExponentialGaussianModel, SkewedGaussianModel, SkewedVoigtModel
