@@ -198,6 +198,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.Bsubtract = QToolButton()
         self.Bsubtract.setText("-")
         self.Bsubtract.setToolTip("Remove calculation model")
+        self.Bpopul = QCheckBox("Populate",self)
+        # self.Bfit.setText("Fit")
+        self.Bpopul.setToolTip("Populate fields with fitting parameters")
         self.Bfit = QToolButton()
         self.Bfit.setText("Fit")
         self.Bfit.setToolTip("Fit single curve")
@@ -228,6 +231,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.L1fit.addWidget(self.Bsubtract)
         self.L1fit.addWidget(self.LR)
         self.L1fit.addWidget(self.Lvalue)
+        self.L1fit.addWidget(self.Bpopul)
         self.L1fit.addItem(horizontSpacer)
         self.L1fit.addWidget(self.Bfit)
 
@@ -1083,12 +1087,12 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.LGfit.addWidget(QLabel("  fix\ncenter"), 0, 9)
                 self.LGfit.addWidget(QLabel("  neg."), 0, 10)
 
-            self.LGfit.addWidget(comboNumber, ii + 1, 0)
-            self.LGfit.addWidget(comboName, ii + 1, 1)
-            self.LGfit.addWidget(combobox, ii + 1, 2)
-            # self.LGfit.addWidget(comboNumber, ii * 2 + 1, 0)
-            # self.LGfit.addWidget(comboName, ii * 2 + 1, 1)
-            # self.LGfit.addWidget(combobox, ii * 2 + 1, 2)
+            # self.LGfit.addWidget(comboNumber, ii + 1, 0)
+            # self.LGfit.addWidget(comboName, ii + 1, 1)
+            # self.LGfit.addWidget(combobox, ii + 1, 2)
+            self.LGfit.addWidget(comboNumber, ii * 2 + 1, 0)
+            self.LGfit.addWidget(comboName, ii * 2 + 1, 1)
+            self.LGfit.addWidget(combobox, ii * 2 + 1, 2)
             self.model_combobox.append([combobool, combobox, comboName, comboNumber])
 
     def make_ComboBox_fields(self, cb, ii):
@@ -1556,7 +1560,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.statusBar().showMessage("## One of the models shows an error ##", 10000)
 
         self.fit_vals = self.result.values
-        self.add_fitting_pars_to_entryfields()
+        # self.add_fitting_pars_to_entryfields()
+        self.add_fitting_data_to_gui()
 
         # This can be separated into new function (if needed)
         if self.plots:
@@ -1619,6 +1624,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # self.scrollbar_action()
 
     def popup_subtract_bkgd(self):
+        # todo add undo button
         self.dgiw = QDialog()
         Lopt = QVBoxLayout()
         Lopt.setAlignment(Qt.AlignCenter)
@@ -1936,6 +1942,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 labl = QLabel(val)
                 labl.setAlignment(Qt.AlignCenter)
                 self.LGfit.addWidget(labl, row * 2, col * 2 + 4)
+                if self.Bpopul.isChecked():
+                    self.LGfit.itemAtPosition(row * 2 - 1, col * 2 + 4).widget().setText(val)
             col += 1
             cou += 1
 
