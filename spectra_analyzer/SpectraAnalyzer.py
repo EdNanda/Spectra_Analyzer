@@ -8,6 +8,7 @@ import traceback
 import pandas as pd
 import numpy as np
 import matplotlib
+matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 import openpyxl
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar
@@ -31,7 +32,6 @@ from glob import glob
 from functools import partial
 from matplotlib import rcParams
 
-matplotlib.use('Qt5Agg')
 rcParams.update({'figure.autolayout': True})
 cmaps = OrderedDict()
 
@@ -315,6 +315,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.select_file()
         self.is_giwaxs = False
         if self.is_file_selected:
+            self.reset_mod_init_data()
             self.load_single_matrix_file()
             self.create_mod_data()
             self.extract_data_for_axis()
@@ -326,6 +327,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.select_file()
         self.is_giwaxs = False
         if self.is_file_selected:
+            self.reset_mod_init_data()
             self.popup_read_file()
             self.popup_test_file_slow()
             self.create_mod_data()
@@ -342,6 +344,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.select_folder()
         self.is_giwaxs = False
         if self.is_file_selected:
+            self.reset_mod_init_data()
             self.pl_folder_gather_data()
             self.create_mod_data()
             self.extract_data_for_axis()
@@ -353,6 +356,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.is_giwaxs = True
         self.select_folder()
         if self.is_file_selected:
+            self.reset_mod_init_data()
             self.popup_giwaxs_w_log()
             self.create_mod_data()
             self.extract_data_for_axis()
@@ -364,6 +368,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.select_folder()
         self.is_giwaxs = False
         if self.is_file_selected:
+            self.reset_mod_init_data()
             self.separate_xrd_gather_data()
             self.create_mod_data()
             self.extract_data_for_axis()
@@ -380,8 +385,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.statusBar().showMessage("")
 
     def save_data_2DMatrix(self):
-        fi, le = self.dummy_folderpath_file.rsplit("/", 1) # TODO remove dummy...
-        self.init_data.to_excel(fi + "/0_collected_" + le + ".xlsx")
+        fi, le = self.dummy_folderpath_file.rsplit("/", 1) # TODO remove dummy
+        self.init_data.to_excel(self.folder_path + "/0_collected_" + self.sample_name + ".xlsx")
 
     def clean_dead_pixel(self):
         self.mod_data.iloc[1421] = self.mod_data.iloc[1419:1421].mean()
@@ -433,6 +438,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def create_mod_data(self):
         self.mod_data = self.init_data.copy()
+
+    def reset_mod_init_data(self):
+        self.init_data= pd.DataFrame()
+        self.mod_data = pd.DataFrame()
+
 
     def clean_all_fit_fields(self):
         rows = list(range(self.LGfit.rowCount()))[1:]
@@ -577,7 +587,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     tn = 2
                 axs[c].set_xticks(np.linspace(0, leng - 1, tn))
                 axs[c].set_xticklabels(
-                    np.around(np.linspace(self.xtime[srt], self.xtime[end], tn), decimals=1).astype(int))
+                    np.around(np.linspace(self.xarray[srt], self.xarray[end], tn), decimals=1).astype(int))
 
                 if c == 0:
                     axs[0].set_ylabel(r"2$\theta$ (Degree)")
@@ -602,7 +612,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
                 srt = srt + leng
 
-            if "eta" in self.gname:
+            #if "eta" in self.gname:
+            if self.is_giwaxs:
                 fig.text(0.5, 0.08, 'Eta (degrees)', ha='center')
             else:
                 fig.text(0.5, 0.08, 'Time (seconds)', ha='center')
@@ -843,11 +854,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.comb_data = combined[["Time", "DegC"]]
 
     def extract_data_for_axis(self):
-        try:
-            self.xtime = [ik[0] for ik in self.mod_data.keys()]
-        except:
-            self.xtime = self.mod_data.keys().values.astype(float)
-        self.xsize = len(self.xtime) - 1
+        self.xarray = self.mod_data.keys().values.astype(float)
+        self.xsize = len(self.xarray) - 1
 
         self.max_int = self.mod_data.to_numpy().max()
         self.min_int = self.mod_data.to_numpy().min()
@@ -1296,17 +1304,17 @@ class MainWindow(QtWidgets.QMainWindow):
                 name = ke.replace(va, "")
                 plt.title(va)
                 if va in ke:
-                    plt.plot(self.xtime[self.start:self.end + 1], df[ke], label=name[:-1])
+                    plt.plot(self.xarray[self.start:self.end + 1], df[ke], label=name[:-1])
             self.plot_preview_fitting(folder, va)
 
-        plt.plot(self.xtime[self.start:self.end + 1], df["r-squared"], label="R²")
+        plt.plot(self.xarray[self.start:self.end + 1], df["r-squared"], label="R²")
         plt.title("R-squared")
         self.plot_preview_fitting(folder, "r-squared")
 
         if self.is_pero_peak:
             try:
                 for ndf in self.norm_df.keys():
-                    plt.plot(self.xtime[self.start:self.end + 1], self.norm_df[ndf], label=ndf.rsplit("_", 1)[0])
+                    plt.plot(self.xarray[self.start:self.end + 1], self.norm_df[ndf], label=ndf.rsplit("_", 1)[0])
                 plt.title("Amplitude ratio with Perovskite peak")
                 self.plot_preview_fitting(folder, "ratio")
             except:
@@ -1673,7 +1681,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.axes.grid(True, linestyle='--')
 
     def plot_setup(self):
-        # TODO fix x axis of heatplot
         self.setWindowTitle("Spectra Analyzer (" + self.sample_name + ")")
 
         try:
@@ -1701,7 +1708,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if self.is_giwaxs:
             self.canvas.axes.set_xlabel(axis_name)
-            if "eta" in self.gname:
+            #if "eta" in self.gname:
+            if self.is_giwaxs:
                 self.t_label = "Degree"
             else:
                 self.t_label = "Time"
@@ -1731,13 +1739,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self._plot_hline2, = self.savnac.axes.plot([0, self.xsize], [0, 0], 'b')  # Horizontal line2 (Down boundary)
 
         if self.is_giwaxs:
-            if "eta" in self.gname:
+            #if "eta" in self.gname:
+            if self.is_giwaxs:
                 self.savnac.axes.set_xlabel("Eta (degrees)")
             else:
                 self.savnac.axes.set_xlabel("Time (seconds)")
             self.savnac.axes.set_ylabel(axis_name)
             tempe = [ik[1] for ik in self.mod_data.keys()]
-            self.ax2.plot(range(len(self.xtime)), tempe, "--m")
+            self.ax2.plot(range(len(self.xarray)), tempe, "--m")
             self.ax2.set_ylabel("Temperature (°C)", color="m")  #
             self.ax2.set_ylim([min(tempe) * 0.9, max(tempe) * 1.1])
             self.ax2.tick_params(axis='y', colors='m')
@@ -1754,14 +1763,14 @@ class MainWindow(QtWidgets.QMainWindow):
             self.savnac.axes.set_yticks(np.linspace(0, len(self.yarray), 8))
             self.savnac.axes.set_yticklabels(np.around(np.linspace(self.yarray[0], self.yarray[-1], 8), decimals=1))
         # X-axis
-        self.savnac.axes.set_xticks(np.linspace(0, len(self.xtime), 8))
+        self.savnac.axes.set_xticks(np.linspace(0, len(self.xarray), 8))
         try:  # In case index is not made of numbers but strings
-            if "eta" in self.gname:
-                self.savnac.axes.set_xticklabels(np.around(np.linspace(0, self.xtime[-1], 8), decimals=1))
+            if self.is_giwaxs:
+                self.savnac.axes.set_xticklabels(np.around(np.linspace(0, self.xarray[-1], 8), decimals=1))
             else:
-                self.savnac.axes.set_xticklabels(np.around(np.linspace(0, self.xtime[-1], 8), decimals=0).astype(int))
+                self.savnac.axes.set_xticklabels(np.around(np.linspace(0, self.xarray[-1], 8), 1))
         except:
-            pass
+            self.savnac.axes.set_xticklabels(np.around(np.linspace(0, len(self.xarray), 8)), 1)
 
     def rename_plot_axis(self):
         self.dgiw = QDialog()
@@ -2021,9 +2030,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self._plot_ref.set_ydata(self.mod_data.iloc[:, [bar]].T.values[0])
 
         try:
-            time = str(round(float(self.xtime[bar]), 1))
+            time = str(round(float(self.xarray[bar]), 1))
         except:
-            time = str(self.xtime[bar])
+            time = str(self.xarray[bar])
         self.text_time.set_text(self.t_label + " " + time)
         self.text_pos.set_text("Position " + str(bar))
 
