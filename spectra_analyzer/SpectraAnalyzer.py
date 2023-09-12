@@ -16,7 +16,7 @@ from matplotlib.figure import Figure
 from collections import OrderedDict
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QGridLayout, QVBoxLayout, QHBoxLayout, QSpacerItem, QSizePolicy
-from PyQt5.QtWidgets import QScrollBar, QToolButton, QLabel, QComboBox, QLineEdit, QMenu
+from PyQt5.QtWidgets import QScrollBar, QToolButton, QLabel, QComboBox, QLineEdit, QMenu, QPushButton
 from PyQt5.QtWidgets import QDialog, QFormLayout, QDialogButtonBox, QAction, QCheckBox, QMessageBox
 from PyQt5.QtCore import Qt, QObject, pyqtSignal, QRunnable, pyqtSlot, QThreadPool
 from PyQt5.QtGui import QFont, QIcon
@@ -104,6 +104,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.is_giwaxs = False
         self.is_pero_peak = False
         self.is_file_selected = False
+        self.is_subtract = False
 
         self.constraints = []
 
@@ -1102,7 +1103,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def make_ComboBox_fields(self, cb, ii):
         single_cnst = []
         if cb[0]:
-            for i in reversed(range(1, self.mnm)):# todo loop might not be needed
+            for i in reversed(range(1, self.mnm)):
                 try:
                     self.LGfit.itemAtPosition(ii * 2 + 1, i + 2).widget().deleteLater()
                 except:
@@ -1630,7 +1631,6 @@ class MainWindow(QtWidgets.QMainWindow):
         # self.scrollbar_action()
 
     def popup_subtract_bkgd(self):
-        # todo add undo button
         self.dgiw = QDialog()
         Lopt = QVBoxLayout()
         Lopt.setAlignment(Qt.AlignCenter)
@@ -1656,16 +1656,25 @@ class MainWindow(QtWidgets.QMainWindow):
 
         Lopt.addLayout(layout)
 
-        Bok = QDialogButtonBox(QDialogButtonBox.Ok)
-        Lopt.addWidget(Bok)
-        Bok.accepted.connect(self.subtract_background)
+        Bsubtract = QPushButton("Subtract")
+
+        Bapply = QDialogButtonBox(QDialogButtonBox.Apply)
+        Bcancel = QDialogButtonBox(QDialogButtonBox.Cancel)
+
+        Lopt.addWidget(Bsubtract)
+        Lopt.addWidget(Bapply)
+        Lopt.addWidget(Bcancel)
+
+        Bsubtract.clicked.connect(self.subtract_background_function)
+        Bapply.clicked.connect(self.subtract_background_accept)
+        Bcancel.rejected.connect(self.subtract_background_cancel)
 
         self.dgiw.setLayout(Lopt)
         self.dgiw.setWindowTitle("Select range to subtract")
         self.dgiw.setWindowModality(Qt.ApplicationModal)
         self.dgiw.exec_()
 
-    def subtract_background(self):
+    def subtract_background_function(self):
         left_b = int(self.left_b.text())
         right_b = left_b + int(self.len_range.text())
 
@@ -1673,16 +1682,42 @@ class MainWindow(QtWidgets.QMainWindow):
         col_mean = self.init_data.iloc[:, left_b:right_b].mean(axis=1)
         # Subtract mean to all dataset
         clean_data = self.init_data.subtract(col_mean, "index")
+
         # Rename mdata (this is what is always plotted)
-        self.init_data = clean_data
-        self.create_mod_data()
-        # self.init_data = clean_data
+        self.mod_data = clean_data.copy()
+        self.is_subtract = True
 
         # Update plot
         self.extract_data_for_axis()
         self.plot_setup()
         self.bar_update_plots(0)
-        # self.scrollbar_action()
+
+    def subtract_background_accept(self, clean_data):
+        if self.is_subtract:
+            # Rename mdata (this is what is always plotted)
+            self.init_data = self.mod_data.copy()
+            self.create_mod_data()
+
+            # Update plot
+            self.extract_data_for_axis()
+            self.plot_setup()
+            self.bar_update_plots(0)
+            self.dgiw.close()
+            self.is_subtract = False
+        else:
+            pass
+
+    def subtract_background_cancel(self):
+        self.is_subtract = False
+        # Rename mdata (this is what is always plotted)
+        #self.init_data = clean_data
+        self.create_mod_data()
+
+        # Update plot
+        self.extract_data_for_axis()
+        self.plot_setup()
+        self.bar_update_plots(0)
+        self.dgiw.close()
 
     def plot_restart(self):
         self.savnac.axes.set_xlabel('Time (s)')
@@ -1839,7 +1874,6 @@ class MainWindow(QtWidgets.QMainWindow):
             number = int(number)
 
         return number
-# TODO add quick guide on how to use it
     # Allow to keep center fixed (with checkbox)
     # def add_fitting_pars_to_entryfields(self):
     #     x_arr = [4, 6, 8]  # usable grid coordinates
