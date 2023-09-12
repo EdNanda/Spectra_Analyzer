@@ -389,7 +389,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.statusBar().showMessage("")
 
     def save_data_2DMatrix(self):
-        fi, le = self.dummy_folderpath_file.rsplit("/", 1) # TODO remove dummy
+        # fi, le = self.dummy_folderpath_file.rsplit("/", 1)
         self.init_data.to_excel(self.folder_path + "/0_collected_" + self.sample_name + ".xlsx")
 
     def clean_dead_pixel(self):
@@ -533,7 +533,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def save_heatplot_giwaxs(self):
         # TODO check that this works for any curve, not just giwaxs
-        fi, le = self.dummy_folderpath_file.rsplit("/", 1)
+        # fi, le = self.dummy_folderpath_file.rsplit("/", 1)
+        fi = self.folder_path
+        le = self.sample_name
 
         ticks_n = 10
 
@@ -716,7 +718,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.statusBar().showMessage("Loading files, please be patient...")
         pl_files = sorted(glob(self.folder_path + "*.dat"))
 
-        self.dummy_folderpath_file = self.folder_path + self.sample_name
+        # self.dummy_folderpath_file = self.folder_path + self.sample_name
 
         # List to store all dataframes
         dataframes = []
@@ -735,8 +737,10 @@ class MainWindow(QtWidgets.QMainWindow):
     def pl_folder_gather_data(self):
         pl_files = sorted(glob(self.folder_path + "\\*.txt"), key=os.path.getmtime)
 
-        self.dummy_folderpath_file = self.folder_path + "/" + self.folder_path.split("/")[-1]
-        self.file_path = self.dummy_folderpath_file
+        # self.dummy_folderpath_file = self.folder_path + "/" + self.folder_path.split("/")[-1]
+        # self.file_path = self.folder_path + self.sample_name
+        # fi = self.folder_path
+        # le = self.sample_name
 
         for counter, file in enumerate(pl_files):
             data = pd.read_csv(file, delimiter="\t", skiprows=14, header=None, names=["Wavelength", counter],
@@ -769,8 +773,8 @@ class MainWindow(QtWidgets.QMainWindow):
             fnum = 0
 
         self.gname = self.giw_names[fnum]
-        self.dummy_folderpath_file = self.folder_path + "/" + self.gname
-        input1 = open(self.dummy_folderpath_file, 'rb')
+        dummy_folderpath_file = self.folder_path + "/" + self.gname
+        input1 = open(dummy_folderpath_file, 'rb')
         with input1 as f:
             lines = f.readlines()
 
@@ -816,14 +820,14 @@ class MainWindow(QtWidgets.QMainWindow):
         end_times = []
         self.separated = []
         for c, t in enumerate(times):
-            data = pd.read_csv(self.dummy_folderpath_file, delimiter=" ", skiprows=starts[c] + 1, header=None,
+            data = pd.read_csv(dummy_folderpath_file, delimiter=" ", skiprows=starts[c] + 1, header=None,
                                nrows=ends[c] - starts[c] - 1)
             data.columns = head
 
             if c == 0:
                 combined = data
             else:
-                if "eta" in self.dummy_folderpath_file:
+                if "eta" in dummy_folderpath_file:
                     pass
                 else:
                     end_times.append(data.Time.iloc[-1])
@@ -836,7 +840,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Gather measurement data using pandas
         pd.set_option('mode.chained_assignment', None)  # ignores an error message
-        for counter, gf in enumerate(glob(self.dummy_folderpath_file + "_[0-9]*.dat")):
+        for counter, gf in enumerate(glob(dummy_folderpath_file + "_[0-9]*.dat")):
             # Read data from file
             Mdata = pd.read_csv(gf, index_col=None, skiprows=15, header=None, delimiter="\t")
             raw_dat = Mdata[[0, 1]]
@@ -850,7 +854,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.init_data = self.init_data.set_index("TTh")
         # print(self.mdata)
 
-        if "eta" in self.dummy_folderpath_file:
+        if "eta" in dummy_folderpath_file:
             self.init_data.columns = [combined.eta, combined.DegC]
             self.comb_data = combined[["eta", "DegC"]]
         else:
@@ -1257,14 +1261,16 @@ class MainWindow(QtWidgets.QMainWindow):
     def save_fitting_data(self):
         # Get folder names
         if self.is_giwaxs:
-            fi, le = self.dummy_folderpath_file.rsplit("/", 1)
-            if self.start != 0 or self.end != self.xsize:
-                folder = self.dummy_folderpath_file.rsplit("/", 1)[0] + "/Fitting_" + le + "[" + str(
-                    self.start) + "-" + str(
-                    self.end) + "]/"
-            else:
-                folder = fi + "/Fitting_" + le + "/"
-            name = le
+            fi = self.folder_path
+            le = self.sample_name
+            # fi, le = self.dummy_folderpath_file.rsplit("/", 1)
+            # if self.start != 0 or self.end != self.xsize: # todo this might not work anymore (giwaxs measurement)
+            #     folder = self.dummy_folderpath_file.rsplit("/", 1)[0] + "/Fitting_" + le + "[" + str(
+            #         self.start) + "-" + str(
+            #         self.end) + "]/"
+            # else:
+            #     folder = fi + "/Fitting_" + le + "/"
+            # name = le
         else:
             if self.start != 0 or self.end != self.xsize:
                 folder = self.file_path.rsplit("/", 1)[0] + "/Fitting[" + str(self.start) + "-" + str(self.end) + "]/"
@@ -1373,7 +1379,7 @@ class MainWindow(QtWidgets.QMainWindow):
         return new_name
 
 
-    def fitmodel_setup(self):  # FITTING PART #TODO make class, when gui created, make instance of class
+    def fitmodel_setup(self):  # FITTING PART
         self.is_pero_peak = False  # Reset value to False
         bar = int(self.ScrollbarTime.value())  # Read scrollbar value
 
@@ -1835,29 +1841,28 @@ class MainWindow(QtWidgets.QMainWindow):
         return number
 # TODO add quick guide on how to use it
     # Allow to keep center fixed (with checkbox)
-    def add_fitting_pars_to_entryfields(self):
-        # TODO add fitting data to fields
-        x_arr = [4, 6, 8]  # usable grid coordinates
-        fit_vals = self.fit_vals
-        parameters = fit_vals.keys()
-
-        for mc, list_name in enumerate(self.model_combobox):
-            list_name = list_name[1]
-
-            if list_name.currentText() == "":
-                pass
-            elif list_name.currentText() == "Polynomial":
-                # read polynomial number
-                pass
-            elif list_name.currentText() == "Linear":
-                variables = ["slope", "intercept"]
-                self.add_fitting_pars_process(parameters, variables, list_name, fit_vals)
-            elif list_name.currentText() == "Exponential":
-                variables = ["amplitude", "decay"]
-                self.add_fitting_pars_process(parameters, variables, list_name, fit_vals)
-            else:
-                variables = ["amplitude", "center", "sigma"]
-                self.add_fitting_pars_process(parameters, variables, list_name, fit_vals)
+    # def add_fitting_pars_to_entryfields(self):
+    #     x_arr = [4, 6, 8]  # usable grid coordinates
+    #     fit_vals = self.fit_vals
+    #     parameters = fit_vals.keys()
+    #
+    #     for mc, list_name in enumerate(self.model_combobox):
+    #         list_name = list_name[1]
+    #
+    #         if list_name.currentText() == "":
+    #             pass
+    #         elif list_name.currentText() == "Polynomial":
+    #             # read polynomial number
+    #             pass
+    #         elif list_name.currentText() == "Linear":
+    #             variables = ["slope", "intercept"]
+    #             self.add_fitting_pars_process(parameters, variables, list_name, fit_vals)
+    #         elif list_name.currentText() == "Exponential":
+    #             variables = ["amplitude", "decay"]
+    #             self.add_fitting_pars_process(parameters, variables, list_name, fit_vals)
+    #         else:
+    #             variables = ["amplitude", "center", "sigma"]
+    #             self.add_fitting_pars_process(parameters, variables, list_name, fit_vals)
 
     def add_fitting_pars_process(self,parameters, variables, list_name, fit_vals):
         for pars in parameters:
@@ -2005,10 +2010,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def save_current_matrix_state(self):
         self.statusBar().showMessage("Saving file, please wait...")
-        try:
-            fi, le = self.dummy_folderpath_file.rsplit("/", 1)
-        except:
-            fi, le = self.file_path.rsplit("/", 1)
+        fi = self.folder_path
+        # le = self.sample_name
+        # try:
+        #     fi, le = self.dummy_folderpath_file.rsplit("/", 1)
+        # except:
+        #     fi, le = self.file_path.rsplit("/", 1)
 
         filename = \
             QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', directory=fi,
