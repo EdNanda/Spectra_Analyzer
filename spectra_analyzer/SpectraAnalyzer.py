@@ -3,6 +3,7 @@ __version__ = "1.15 (2022)"
 
 import sys
 import os
+import re
 import csv
 import traceback
 import pandas as pd
@@ -1388,18 +1389,23 @@ class MainWindow(QtWidgets.QMainWindow):
     def trivial(self, x):
         return 0
 
-    def fix_model_name(self, name, model):
+    def fix_model_name(self, name, model, nn):
         model_dict = {'Linear': 'li', 'Polynomial': 'po', 'Exponential': 'ex', 'Gaussian': 'ga',
                 'Lorentzian': 'lo', 'Voigt': 'vo', 'PseudoVoigt': 'pv', 'SkewedVoigt': 'sv',
                 'ExpGaussian': 'eg', 'SkewedGaussian': 'sg', }
 
-        new_name = model_dict[model] + "_" + name
+        name = re.sub(r'[^a-zA-Z0-9\s]', '', name)
+
+        if len(name) != 0:
+            name = name + "_"
+
+        new_name = model + "_" + str(nn + 1) + "_" + name
 
         return new_name
 
-
     def fitmodel_setup(self):  # FITTING PART
         self.is_pero_peak = False  # Reset value to False
+        is_model_empty = True  # At the beginning model list is empty
         bar = int(self.ScrollbarTime.value())  # Read scrollbar value
 
         y_data = np.array(self.mod_data.iloc[:, [bar]].T.values[0])
@@ -1409,7 +1415,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.pars = {}
         self.mod_names = []
         self.fit_vals = []
-        model_type = None
+        model_name = None
 
         for nn, list_name in enumerate(self.model_combobox):
             if nn == 0:
@@ -1420,119 +1426,115 @@ class MainWindow(QtWidgets.QMainWindow):
                     pass
             else:
                 pass
-            # TODO use renaming function fix_model_name
+
             list_name = list_name[1]
             if list_name.currentText() == "":
                 pass
 
             elif list_name.currentText() == "Linear":
-                if len(self.model_combobox[nn][2].text()) > 0:
-                    model_type = self.model_combobox[nn][2].text() + "_"
+                given_name = self.model_combobox[nn][2].text()
+                model_type = list_name.currentText()
+                model_name = self.fix_model_name(given_name, model_type, nn)
+
+                present_model = LinearModel(prefix=model_name)
+
+                if not is_model_empty:
+                    self.model_mix = self.model_mix + present_model
+                    self.pars.update(present_model.make_params())
+
                 else:
-                    model_type = "Linear_" + str(nn + 1) + "_"
-
-                first_model = LinearModel(prefix=model_type)
-
-                try:
-                    self.model_mix = self.model_mix + first_model
-                    self.pars.update(first_model.make_params())
-
-                except:
-                    self.model_mix = first_model
-                    self.pars = first_model.guess(y_data, x=x_data)
+                    self.model_mix = present_model
+                    self.pars = present_model.guess(y_data, x=x_data)
+                    is_model_empty = False
 
                 slope = self.constraints[nn][0][0].text().replace(",", ".")
                 interc = self.constraints[nn][0][1].text().replace(",", ".")
 
-                if len(slope) >= 1:
-                    self.pars[model_type + "slope"].set(value=float(slope))
-                else:
-                    pass
-                if len(interc) >= 1:
-                    self.pars[model_type + "intercept"].set(value=float(interc))
-                else:
-                    pass
+                if len(slope) > 0:
+                    self.pars[model_name + "slope"].set(value=float(slope))
+
+                if len(interc) > 0:
+                    self.pars[model_name + "intercept"].set(value=float(interc))
 
             elif list_name.currentText() == "Polynomial":
-                if len(self.model_combobox[nn][2].text()) > 0:
-                    model_type = self.model_combobox[nn][2].text() + "_"
-                else:
-                    model_type = "Polynomial_" + str(nn + 1) + "_"
+                given_name = self.model_combobox[nn][2].text()
+                model_type = list_name.currentText()
+                model_name = self.fix_model_name(given_name, model_type, nn)
 
                 deg = self.constraints[nn][0][0].text()
-                if int(deg) > 7:
+                if len(deg) == 0:
+                    self.constraints[nn][0][0].setText("1")
+                elif int(deg) < 0:
+                    self.constraints[nn][0][0].setText("1")
+                elif int(deg) > 7:
                     deg = 7
                     self.constraints[nn][0][0].setText("7")
 
-                first_model = PolynomialModel(prefix=model_type, degree=int(deg))
+                present_model = PolynomialModel(prefix=model_name, degree=int(deg))
 
                 try:
-                    self.model_mix = self.model_mix + first_model
-                    self.pars.update(first_model.make_params())
+                    self.model_mix = self.model_mix + present_model
+                    self.pars.update(present_model.make_params())
                 except:
-                    self.model_mix = first_model
-                    self.pars = first_model.guess(y_data, x=x_data)
-
-
+                    self.model_mix = present_model
+                    self.pars = present_model.guess(y_data, x=x_data)
 
             elif list_name.currentText() == "Exponential":
-                if len(self.model_combobox[nn][2].text()) > 0:
-                    model_type = self.model_combobox[nn][2].text() + "_"
-                else:
-                    model_type = "Exponential_" + str(nn + 1) + "_"
+                given_name = self.model_combobox[nn][2].text()
+                model_type = list_name.currentText()
+                model_name = self.fix_model_name(given_name, model_type, nn)
 
-                first_model = ExponentialModel(prefix=model_type)
+                present_model = ExponentialModel(prefix=model_name)
 
                 try:
-                    self.model_mix = self.model_mix + first_model
-                    self.pars.update(first_model.make_params())
+                    self.model_mix = self.model_mix + present_model
+                    self.pars.update(present_model.make_params())
                 except:
-                    self.model_mix = first_model
-                    self.pars = first_model.guess(y_data, x=x_data)
+                    self.model_mix = present_model
+                    self.pars = present_model.guess(y_data, x=x_data)
 
                 amp = self.constraints[nn][0][0].text().replace(",", ".")
                 dec = self.constraints[nn][0][1].text().replace(",", ".")
 
                 if len(amp) >= 1:
-                    self.pars[model_type + "amplitude"].set(value=float(amp))
+                    self.pars[model_name + "amplitude"].set(value=float(amp))
                 else:
                     pass
                 if len(dec) >= 1:
-                    self.pars[model_type + "decay"].set(value=float(dec))
+                    self.pars[model_name + "decay"].set(value=float(dec))
                 else:
                     pass
 
             else:
-                if len(self.model_combobox[nn][2].text()) > 0:
-                    model_type = self.model_combobox[nn][2].text() + "_"
-                    print("combo_mod " + self.model_combobox[nn][2].text())
-                else:
-                    model_type = list_name.currentText() + "_" + str(nn + 1) + "_"
+                given_name = self.model_combobox[nn][2].text()
+                model_type = list_name.currentText()
+                model_name = self.fix_model_name(given_name, model_type, nn)
 
 
                 if "Lorentzian" in list_name.currentText():
-                    first_model = LorentzianModel(prefix=model_type)
+                    present_model = LorentzianModel(prefix=model_name)
                 elif "PseudoVoigt" in list_name.currentText():
-                    first_model = PseudoVoigtModel(prefix=model_type)
+                    present_model = PseudoVoigtModel(prefix=model_name)
                 elif "ExpGaussian" in list_name.currentText():
-                    first_model = ExponentialGaussianModel(prefix=model_type)
+                    present_model = ExponentialGaussianModel(prefix=model_name)
                 elif "SkewedGaussian" in list_name.currentText():
-                    first_model = SkewedGaussianModel(prefix=model_type)
+                    present_model = SkewedGaussianModel(prefix=model_name)
                 elif "SkewedVoigt" in list_name.currentText():
-                    first_model = SkewedVoigtModel(prefix=model_type)
+                    present_model = SkewedVoigtModel(prefix=model_name)
                 elif "Voigt" in list_name.currentText():
-                    first_model = VoigtModel(prefix=model_type)
+                    present_model = VoigtModel(prefix=model_name)
                 elif "Gaussian" in list_name.currentText():
-                    first_model = GaussianModel(prefix=model_type)
+                    present_model = GaussianModel(prefix=model_name)
                 else:
                     print("model error")
+                    self.statusBar().showMessage("Model not recognized!!", 10000)
 
                 try:
-                    self.model_mix = self.model_mix + first_model
-                    self.pars.update(first_model.make_params())
+                    self.model_mix = self.model_mix + present_model
+                    self.pars.update(present_model.make_params())
                 except:
-                    self.model_mix = first_model
-                    self.pars = first_model.guess(y_data, x=x_data)
+                    self.model_mix = present_model
+                    self.pars = present_model.guess(y_data, x=x_data)
 
                 amp = self.constraints[nn][0][0].text().replace(",", ".")
                 cen = self.constraints[nn][0][1].text().replace(",", ".")
@@ -1541,30 +1543,30 @@ class MainWindow(QtWidgets.QMainWindow):
                 if len(amp) >= 1:
                     va = float(amp)
                     if self.LGfit.itemAtPosition(nn * 2 + 1, 10).widget().isChecked():
-                        self.pars[model_type + "amplitude"].set(value=va, max=0)
+                        self.pars[model_name + "amplitude"].set(value=va, max=0)
                     else:
-                        self.pars[model_type + "amplitude"].set(value=va, min=0)
+                        self.pars[model_name + "amplitude"].set(value=va, min=0)
                 else:
-                    self.pars[model_type + "amplitude"].set(min=0)
+                    self.pars[model_name + "amplitude"].set(min=0)
 
-                self.pars[model_type + "height"].set(max=self.max_int)
+                self.pars[model_name + "height"].set(max=self.max_int)
 
                 if len(cen) >= 1:
                     vv = float(cen)
                     if self.LGfit.itemAtPosition(nn * 2 + 1, 9).widget().isChecked():
-                        self.pars[model_type + "center"].set(value=vv, vary=False)
+                        self.pars[model_name + "center"].set(value=vv, vary=False)
                     else:
-                        self.pars[model_type + "center"].set(value=vv, min=vv / 3, max=vv * 3)
+                        self.pars[model_name + "center"].set(value=vv, min=vv / 3, max=vv * 3)
                 else:
                     pass
                 if len(sig) >= 1:
                     vs = float(sig)
-                    self.pars[model_type + "sigma"].set(value=vs, min=vs / 3, max=vs * 3)
+                    self.pars[model_name + "sigma"].set(value=vs, min=vs / 3, max=vs * 3)
                 else:
                     pass
 
-            if model_type is not None:
-                self.mod_names.append(model_type)
+            if model_name is not None:
+                self.mod_names.append(model_name)
                 self.fit_model_bool = True
             else:
                 self.statusBar().showMessage("No fitting models selected", 5000)
