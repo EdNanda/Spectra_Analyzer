@@ -1343,7 +1343,6 @@ class MainWindow(QtWidgets.QMainWindow):
         plt.close()
 
     def parallel_calculation(self, w, progress_callback):
-        # TODO fix x-ydata to what is calculated before e.g. self.wave
         ydata = np.array(self.mod_data.iloc[:, w].values)
         xdata = np.array(self.mod_data.index.values)
 
@@ -1833,6 +1832,7 @@ class MainWindow(QtWidgets.QMainWindow):
         form_lay.addRow("Heatmap Y-label", axis_labels[3])
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        axis_labels[0].textChanged.connect(lambda: self.rename_field(axis_labels))
         buttons.accepted.connect(lambda: self.rename_accept(axis_labels))
         buttons.rejected.connect(self.rename_close)
 
@@ -1861,6 +1861,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.draw_idle()
         self.savnac.draw_idle()
         self.dgiw.close()
+
+    def rename_field(self, labels):
+        axis_name = labels[0].text()
+        labels[3].setText(axis_name)
 
     def reject(self):
         return None
