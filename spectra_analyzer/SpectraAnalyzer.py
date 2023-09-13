@@ -101,6 +101,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.models = ["", "Linear", "Polynomial", "Exponential", "Gaussian",
                        "Lorentzian", "Voigt", "PseudoVoigt", "SkewedVoigt",
                        "ExpGaussian", "SkewedGaussian", ]
+        self.init_data = pd.DataFrame()
         self.is_giwaxs = False
         self.is_pero_peak = False
         self.is_file_selected = False
@@ -201,7 +202,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.Bsubtract.setToolTip("Remove calculation model")
         self.Bpopul = QCheckBox("Populate",self)
         # self.Bfit.setText("Fit")
-        self.Bpopul.setToolTip("Populate fields with fitting parameters")
+        self.Bpopul.setToolTip("Fitting parameters will not only be \ndisplayed but added to the entry fields")
         self.Bfit = QToolButton()
         self.Bfit.setText("Fit")
         self.Bfit.setToolTip("Fit single curve")
@@ -390,36 +391,45 @@ class MainWindow(QtWidgets.QMainWindow):
         self.statusBar().showMessage("")
 
     def save_data_2DMatrix(self):
-        # fi, le = self.dummy_folderpath_file.rsplit("/", 1)
-        self.init_data.to_excel(self.folder_path + "/0_collected_" + self.sample_name + ".xlsx")
+        if not self.init_data.empty:
+            # fi, le = self.dummy_folderpath_file.rsplit("/", 1)
+            self.init_data.to_excel(self.folder_path + "/0_collected_" + self.sample_name + ".xlsx")
+        else:
+            self.statusBar().showMessage("Data file has not been selected yet!", 5000)
 
     def clean_dead_pixel(self):
-        self.mod_data.iloc[1421] = self.mod_data.iloc[1419:1421].mean()
-        self.mod_data.iloc[1423] = self.mod_data.iloc[1425:1427].mean()
-        self.mod_data.iloc[1422] = self.mod_data.iloc[np.r_[1419:1421, 1425:1427]].mean()
-        self.scrollbar_action()
+        if not self.init_data.empty:
+            self.mod_data.iloc[1421] = self.mod_data.iloc[1419:1421].mean()
+            self.mod_data.iloc[1423] = self.mod_data.iloc[1425:1427].mean()
+            self.mod_data.iloc[1422] = self.mod_data.iloc[np.r_[1419:1421, 1425:1427]].mean()
+            self.scrollbar_action()
+        else:
+            self.statusBar().showMessage("Data file has not been selected yet!", 5000)
 
     def save_snapshot_data(self):
-        self.fitmodel_process()
-        bar = int(self.ScrollbarTime.value())  # Read scrollbar value
+        if not self.init_data.empty:
+            self.fitmodel_process()
+            bar = int(self.ScrollbarTime.value())  # Read scrollbar value
 
-        x_data = np.array(self.yarray)
-        y_data = np.array(self.mod_data.iloc[:, [bar]].T.values[0])
+            x_data = np.array(self.yarray)
+            y_data = np.array(self.mod_data.iloc[:, [bar]].T.values[0])
 
-        comps = self.result.eval_components(x=x_data)
+            comps = self.result.eval_components(x=x_data)
 
-        # Build dataframe
-        snapshot = pd.DataFrame()
-        snapshot['x_data'] = x_data
-        snapshot['raw data'] = y_data
-        snapshot['Best fit'] = self.result.best_fit
-        for cc, mc in enumerate(self.model_mix.components):
-            snapshot[mc.prefix[:-1]] = comps[mc.prefix]
-        snapshot.set_index('x_data', inplace=True)
+            # Build dataframe
+            snapshot = pd.DataFrame()
+            snapshot['x_data'] = x_data
+            snapshot['raw data'] = y_data
+            snapshot['Best fit'] = self.result.best_fit
+            for cc, mc in enumerate(self.model_mix.components):
+                snapshot[mc.prefix[:-1]] = comps[mc.prefix]
+            snapshot.set_index('x_data', inplace=True)
 
-        folder = self.file_path.rsplit("/", 1)[0]
-        snapshot.to_excel(folder + "/snapshot_" + str(bar) + ".xlsx")
-        self.statusBar().showMessage("Snapshot saved", 5000)
+            folder = self.file_path.rsplit("/", 1)[0]
+            snapshot.to_excel(folder + "/snapshot_" + str(bar) + ".xlsx")
+            self.statusBar().showMessage("Snapshot saved", 5000)
+        else:
+            self.statusBar().showMessage("Data file has not been selected yet!", 5000)
 
     def model_row_add(self):
         if self.grid_count < 14:
@@ -533,102 +543,105 @@ class MainWindow(QtWidgets.QMainWindow):
             # return
 
     def save_heatplot_giwaxs(self):
-        # TODO check that this works for any curve, not just giwaxs
-        # fi, le = self.dummy_folderpath_file.rsplit("/", 1)
-        fi = self.folder_path
-        le = self.sample_name
+        if not self.init_data.empty:
+            # TODO check that this works for any curve, not just giwaxs
+            # fi, le = self.dummy_folderpath_file.rsplit("/", 1)
+            fi = self.folder_path
+            le = self.sample_name
 
-        ticks_n = 10
+            ticks_n = 10
 
-        try:
-            sets = len(self.separated)
+            try:
+                sets = len(self.separated)
 
-            if "Time" in self.separated[0].keys():
-                total_size = self.separated[-1]["Time"].iloc[-1]
-            else:
-                total_size = self.separated[-1]["eta"].iloc[-1]
-
-            ind_sizes = []
-            last_time = 0
-
-            mnT = 100  # dummy values to find the temperature range
-            mxT = 0
-            step = 0
-            for cg, gs in enumerate(self.separated):
-                if cg == 0:
-                    step = gs["Time"].iloc[1]
-                    dist = gs["Time"].iloc[-1] + step
-                    total_size += step
-                    last_time = dist
+                if "Time" in self.separated[0].keys():
+                    total_size = self.separated[-1]["Time"].iloc[-1]
                 else:
-                    dist = gs["Time"].iloc[-1] + step - last_time
-                    # print(gs["Time"].iloc[0],gs["Time"].iloc[-1],dist)
-                    last_time = dist
+                    total_size = self.separated[-1]["eta"].iloc[-1]
 
-                ind_sizes.append(dist / total_size)  # To find the ratio of the frames
+                ind_sizes = []
+                last_time = 0
 
-                if mnT > np.min(gs.DegC):
-                    mnT = np.min(gs.DegC)
+                mnT = 100  # dummy values to find the temperature range
+                mxT = 0
+                step = 0
+                for cg, gs in enumerate(self.separated):
+                    if cg == 0:
+                        step = gs["Time"].iloc[1]
+                        dist = gs["Time"].iloc[-1] + step
+                        total_size += step
+                        last_time = dist
+                    else:
+                        dist = gs["Time"].iloc[-1] + step - last_time
+                        # print(gs["Time"].iloc[0],gs["Time"].iloc[-1],dist)
+                        last_time = dist
 
-                if mxT < np.max(gs.DegC):
-                    mxT = np.max(gs.DegC)
+                    ind_sizes.append(dist / total_size)  # To find the ratio of the frames
 
-            fig, axs = plt.subplots(1, sets, figsize=(12, 9), gridspec_kw={'width_ratios': ind_sizes, 'wspace': 0.02,
-                                                                           'hspace': 0.02}, sharex=False, sharey=True)
-            fig.set_tight_layout(False)
+                    if mnT > np.min(gs.DegC):
+                        mnT = np.min(gs.DegC)
 
-            srt = 0
-            for c, ks in enumerate(self.separated):
-                end = srt + ks.shape[0] - 1
-                mat = self.mod_data.iloc[:, srt:end]
-                leng = ks.shape[0]
-                temp = ks.DegC
+                    if mxT < np.max(gs.DegC):
+                        mxT = np.max(gs.DegC)
 
-                axs[c].pcolorfast(mat, vmin=min(self.mod_data.min()) * 0.9, vmax=max(self.mod_data.max()) * 1.1)
-                axt = axs[c].twinx()
-                axt.plot(temp, "--m")
-                axt.set_ylim([mnT * 0.9, mxT * 1.05])
+                fig, axs = plt.subplots(1, sets, figsize=(12, 9), gridspec_kw={'width_ratios': ind_sizes, 'wspace': 0.02,
+                                                                               'hspace': 0.02}, sharex=False, sharey=True)
+                fig.set_tight_layout(False)
 
-                tn = int(ticks_n * ind_sizes[c])
-                if tn <= 1:
-                    tn = 2
-                axs[c].set_xticks(np.linspace(0, leng - 1, tn))
-                axs[c].set_xticklabels(
-                    np.around(np.linspace(self.xarray[srt], self.xarray[end], tn), decimals=1).astype(int))
+                srt = 0
+                for c, ks in enumerate(self.separated):
+                    end = srt + ks.shape[0] - 1
+                    mat = self.mod_data.iloc[:, srt:end]
+                    leng = ks.shape[0]
+                    temp = ks.DegC
 
-                if c == 0:
-                    axs[0].set_ylabel(r"2$\theta$ (Degree)")
-                    axs[0].set_yticks(np.linspace(0, len(self.yarray), 8))
-                    axs[0].set_yticklabels(np.linspace(self.yarray[0], self.yarray[-1], 8).astype(int))
+                    axs[c].pcolorfast(mat, vmin=min(self.mod_data.min()) * 0.9, vmax=max(self.mod_data.max()) * 1.1)
+                    axt = axs[c].twinx()
+                    axt.plot(temp, "--m")
+                    axt.set_ylim([mnT * 0.9, mxT * 1.05])
 
+                    tn = int(ticks_n * ind_sizes[c])
+                    if tn <= 1:
+                        tn = 2
+                    axs[c].set_xticks(np.linspace(0, leng - 1, tn))
+                    axs[c].set_xticklabels(
+                        np.around(np.linspace(self.xarray[srt], self.xarray[end], tn), decimals=1).astype(int))
+
+                    if c == 0:
+                        axs[0].set_ylabel(r"2$\theta$ (Degree)")
+                        axs[0].set_yticks(np.linspace(0, len(self.yarray), 8))
+                        axs[0].set_yticklabels(np.linspace(self.yarray[0], self.yarray[-1], 8).astype(int))
+
+                    else:
+                        pass
+
+                    if c % 2 == 0:
+                        axs[c].xaxis.tick_bottom()
+                    else:
+                        axs[c].xaxis.tick_top()
+
+                    if c == sets - 1:
+                        # this uses the secondary axis (axt)
+                        axt.set_ylabel("Temperature (°C)", color="m")
+                        axt.tick_params(axis='y', colors='m')
+
+                    else:
+                        axt.yaxis.set_major_locator(plt.NullLocator())
+
+                    srt = srt + leng
+
+                #if "eta" in self.gname:
+                if self.is_giwaxs:
+                    fig.text(0.5, 0.08, 'Eta (degrees)', ha='center')
                 else:
-                    pass
+                    fig.text(0.5, 0.08, 'Time (seconds)', ha='center')
 
-                if c % 2 == 0:
-                    axs[c].xaxis.tick_bottom()
-                else:
-                    axs[c].xaxis.tick_top()
-
-                if c == sets - 1:
-                    # this uses the secondary axis (axt)
-                    axt.set_ylabel("Temperature (°C)", color="m")
-                    axt.tick_params(axis='y', colors='m')
-
-                else:
-                    axt.yaxis.set_major_locator(plt.NullLocator())
-
-                srt = srt + leng
-
-            #if "eta" in self.gname:
-            if self.is_giwaxs:
-                fig.text(0.5, 0.08, 'Eta (degrees)', ha='center')
-            else:
-                fig.text(0.5, 0.08, 'Time (seconds)', ha='center')
-
-            fig.savefig(fi + "/0_heatplot_" + le + ".png", dpi=300)
-            plt.close()
-        except:
-            self.savnac.figh.savefig(fi + "/0_heatplot_" + le + ".png", dpi=300)
+                fig.savefig(fi + "/0_heatplot_" + le + ".png", dpi=300)
+                plt.close()
+            except:
+                self.savnac.figh.savefig(fi + "/0_heatplot_" + le + ".png", dpi=300)
+        else:
+            self.statusBar().showMessage("Data file has not been selected yet!", 5000)
 
 
     def select_file(self):
@@ -1184,22 +1197,25 @@ class MainWindow(QtWidgets.QMainWindow):
         self.constraints[ii] = single_cnst
 
     def start_parallel_calculation(self):
-        # self.fitting_parameters_to_plot()
-        self.read_fitting_range()
-        self.fitmodel_setup()
-        self.start_time = time()
-        try:
-            del self.res_df
-        except:
-            pass
+        if not self.init_data.empty:
+            # self.fitting_parameters_to_plot()
+            self.read_fitting_range()
+            self.fitmodel_setup()
+            self.start_time = time()
+            try:
+                del self.res_df
+            except:
+                pass
 
-        self.calc_length = self.end - self.start + 1
+            self.calc_length = self.end - self.start + 1
 
-        self.threadpool.clear()
-        self.statusBar().showMessage(
-            "Fitting multiprocess started with " + str(self.threadpool.maxThreadCount()) + " threads...")
-        for ww in range(self.start, self.end + 1):
-            self.send_to_Qthread(ww)
+            self.threadpool.clear()
+            self.statusBar().showMessage(
+                "Fitting multiprocess started with " + str(self.threadpool.maxThreadCount()) + " threads...")
+            for ww in range(self.start, self.end + 1):
+                self.send_to_Qthread(ww)
+        else:
+            self.statusBar().showMessage("Data file has not been selected yet!", 5000)
 
     def send_to_Qthread(self, w):
         # Create a worker object and send function to it
@@ -1358,13 +1374,16 @@ class MainWindow(QtWidgets.QMainWindow):
         progress_callback.emit(new)
 
     def fitmodel_process(self):
-        self.clean_all_fit_fields()
+        if not self.init_data.empty:
+            self.clean_all_fit_fields()
 
-        self.fitmodel_setup()
-        if self.fit_model_bool:
-            self.fitmodel_plot()
+            self.fitmodel_setup()
+            if self.fit_model_bool:
+                self.fitmodel_plot()
+            else:
+                pass
         else:
-            pass
+            self.statusBar().showMessage("Data file has not been selected yet!", 5000)
 
     def trivial(self, x):
         return 0
@@ -1606,72 +1625,78 @@ class MainWindow(QtWidgets.QMainWindow):
         self.statusBar().showMessage("Initial fitting is done", 5000)
 
     def convert_to_eV(self):
-        # set variables
-        hc = (4.135667696E-15) * (2.999792E8) * 1E9
-        eV_conv = hc / self.mod_data.index
+        if not self.init_data.empty:
+            # set variables
+            hc = (4.135667696E-15) * (2.999792E8) * 1E9
+            eV_conv = hc / self.mod_data.index
 
-        # Make conversion of database and index
-        ev_df = self.mod_data.multiply(self.mod_data.index.values ** 2, axis="index") / hc
+            # Make conversion of database and index
+            ev_df = self.mod_data.multiply(self.mod_data.index.values ** 2, axis="index") / hc
 
-        ev_df = ev_df.set_index(eV_conv)
-        ev_df.index.names = ["Energy"]
+            ev_df = ev_df.set_index(eV_conv)
+            ev_df.index.names = ["Energy"]
 
-        # This is for plotting later
-        axis = np.around(np.linspace(self.yarray[0], self.yarray[-1], 8), decimals=1)
-        self.eV_axis = np.round(hc / axis, 1)
+            # This is for plotting later
+            axis = np.around(np.linspace(self.yarray[0], self.yarray[-1], 8), decimals=1)
+            self.eV_axis = np.round(hc / axis, 1)
 
-        # Rename mdata (this is what is always plotted)
-        self.mod_data = ev_df
+            # Rename mdata (this is what is always plotted)
+            self.mod_data = ev_df
 
-        # Update plot
-        self.extract_data_for_axis()
-        self.plot_setup()
-        self.bar_update_plots(0)
-        # self.scrollbar_action()
+            # Update plot
+            self.extract_data_for_axis()
+            self.plot_setup()
+            self.bar_update_plots(0)
+            # self.scrollbar_action()
+        else:
+            self.statusBar().showMessage("Data file has not been selected yet!", 5000)
 
     def popup_subtract_bkgd(self):
-        self.dgiw = QDialog()
-        Lopt = QVBoxLayout()
-        Lopt.setAlignment(Qt.AlignCenter)
+        if not self.init_data.empty:
+            self.dgiw = QDialog()
+            Lopt = QVBoxLayout()
+            Lopt.setAlignment(Qt.AlignCenter)
 
-        Tdats = QLabel("Select the starting position\nand the number of spectra curves to average")
-        Lopt.addWidget(Tdats)
+            Tdats = QLabel("Select the starting position\nand the number of spectra curves to average")
+            Lopt.addWidget(Tdats)
 
-        Tempt = QLabel("\n")
-        Lopt.addWidget(Tempt)
+            Tempt = QLabel("\n")
+            Lopt.addWidget(Tempt)
 
-        layout = QFormLayout()
+            layout = QFormLayout()
 
-        self.left_b = QLineEdit()
-        self.left_b.setFixedWidth(50)
-        self.left_b.setAlignment(Qt.AlignCenter)
-        self.left_b.setText("0")
-        self.len_range = QLineEdit()
-        self.len_range.setFixedWidth(50)
-        self.len_range.setAlignment(Qt.AlignCenter)
-        self.len_range.setText("5")
-        layout.addRow("Start pos.", self.left_b)
-        layout.addRow("Mean length", self.len_range)
+            self.left_b = QLineEdit()
+            self.left_b.setFixedWidth(50)
+            self.left_b.setAlignment(Qt.AlignCenter)
+            self.left_b.setText("0")
+            self.len_range = QLineEdit()
+            self.len_range.setFixedWidth(50)
+            self.len_range.setAlignment(Qt.AlignCenter)
+            self.len_range.setText("5")
+            layout.addRow("Start pos.", self.left_b)
+            layout.addRow("Mean length", self.len_range)
 
-        Lopt.addLayout(layout)
+            Lopt.addLayout(layout)
 
-        Bsubtract = QPushButton("Subtract")
+            Bsubtract = QPushButton("Subtract")
 
-        Bapply = QDialogButtonBox(QDialogButtonBox.Apply)
-        Bcancel = QDialogButtonBox(QDialogButtonBox.Cancel)
+            Bapply = QDialogButtonBox(QDialogButtonBox.Apply)
+            Bcancel = QDialogButtonBox(QDialogButtonBox.Cancel)
 
-        Lopt.addWidget(Bsubtract)
-        Lopt.addWidget(Bapply)
-        Lopt.addWidget(Bcancel)
+            Lopt.addWidget(Bsubtract)
+            Lopt.addWidget(Bapply)
+            Lopt.addWidget(Bcancel)
 
-        Bsubtract.clicked.connect(self.subtract_background_function)
-        Bapply.clicked.connect(self.subtract_background_accept)
-        Bcancel.rejected.connect(self.subtract_background_cancel)
+            Bsubtract.clicked.connect(self.subtract_background_function)
+            Bapply.clicked.connect(self.subtract_background_accept)
+            Bcancel.rejected.connect(self.subtract_background_cancel)
 
-        self.dgiw.setLayout(Lopt)
-        self.dgiw.setWindowTitle("Select range to subtract")
-        self.dgiw.setWindowModality(Qt.ApplicationModal)
-        self.dgiw.exec_()
+            self.dgiw.setLayout(Lopt)
+            self.dgiw.setWindowTitle("Select range to subtract")
+            self.dgiw.setWindowModality(Qt.ApplicationModal)
+            self.dgiw.exec_()
+        else:
+            self.statusBar().showMessage("Data file has not been selected yet!", 5000)
 
     def subtract_background_function(self):
         left_b = int(self.left_b.text())
@@ -1991,41 +2016,44 @@ class MainWindow(QtWidgets.QMainWindow):
             cou += 1
 
     def popup_heatplot_color_range(self):
-        dgiw = QDialog()
-        Lopt = QVBoxLayout()
-        Lopt.setAlignment(Qt.AlignCenter)
+        if not self.init_data.empty:
+            dgiw = QDialog()
+            Lopt = QVBoxLayout()
+            Lopt.setAlignment(Qt.AlignCenter)
 
-        Tdats = QLabel("Select a new color range for the heaplot")
-        Lopt.addWidget(Tdats)
+            Tdats = QLabel("Select a new color range for the heaplot")
+            Lopt.addWidget(Tdats)
 
-        Tempt = QLabel("\n")
-        Lopt.addWidget(Tempt)
+            Tempt = QLabel("\n")
+            Lopt.addWidget(Tempt)
 
-        max_val = round(self.mod_data.to_numpy().max(), 2)
-        min_val = round(self.mod_data.to_numpy().min(), 2)
+            max_val = round(self.mod_data.to_numpy().max(), 2)
+            min_val = round(self.mod_data.to_numpy().min(), 2)
 
-        self.cb_max = QLineEdit()
-        self.cb_max.setFixedWidth(100)
-        self.cb_max.setAlignment(Qt.AlignCenter)
-        self.cb_max.setText(str(max_val))
-        self.cb_min = QLineEdit()
-        self.cb_min.setFixedWidth(100)
-        self.cb_min.setAlignment(Qt.AlignCenter)
-        self.cb_min.setText(str(min_val))
+            self.cb_max = QLineEdit()
+            self.cb_max.setFixedWidth(100)
+            self.cb_max.setAlignment(Qt.AlignCenter)
+            self.cb_max.setText(str(max_val))
+            self.cb_min = QLineEdit()
+            self.cb_min.setFixedWidth(100)
+            self.cb_min.setAlignment(Qt.AlignCenter)
+            self.cb_min.setText(str(min_val))
 
-        Lvalues = QFormLayout()
-        Lvalues.addRow("Upper Boundary: ", self.cb_max)
-        Lvalues.addRow("Lower Boundary: ", self.cb_min)
+            Lvalues = QFormLayout()
+            Lvalues.addRow("Upper Boundary: ", self.cb_max)
+            Lvalues.addRow("Lower Boundary: ", self.cb_min)
 
-        Lopt.addLayout(Lvalues)
-        Bok = QDialogButtonBox(QDialogButtonBox.Ok)
-        Lopt.addWidget(Bok)
-        Bok.accepted.connect(self.set_heaplot_color_range)
+            Lopt.addLayout(Lvalues)
+            Bok = QDialogButtonBox(QDialogButtonBox.Ok)
+            Lopt.addWidget(Bok)
+            Bok.accepted.connect(self.set_heaplot_color_range)
 
-        dgiw.setLayout(Lopt)
-        dgiw.setWindowTitle("Select boundaries")
-        dgiw.setWindowModality(Qt.ApplicationModal)
-        dgiw.exec_()
+            dgiw.setLayout(Lopt)
+            dgiw.setWindowTitle("Select boundaries")
+            dgiw.setWindowModality(Qt.ApplicationModal)
+            dgiw.exec_()
+        else:
+            self.statusBar().showMessage("Data file has not been selected yet!", 5000)
 
     def set_heaplot_color_range(self):
         min_val = float(self.cb_min.text())
@@ -2047,24 +2075,27 @@ class MainWindow(QtWidgets.QMainWindow):
             pass
 
     def save_current_matrix_state(self):
-        self.statusBar().showMessage("Saving file, please wait...")
-        fi = self.folder_path
-        # le = self.sample_name
-        # try:
-        #     fi, le = self.dummy_folderpath_file.rsplit("/", 1)
-        # except:
-        #     fi, le = self.file_path.rsplit("/", 1)
+        if not self.init_data.empty:
+            self.statusBar().showMessage("Saving file, please wait...")
+            fi = self.folder_path
+            # le = self.sample_name
+            # try:
+            #     fi, le = self.dummy_folderpath_file.rsplit("/", 1)
+            # except:
+            #     fi, le = self.file_path.rsplit("/", 1)
 
-        filename = \
-            QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', directory=fi,
-                                                  filter="CSV (*.csv) ;; Excel (*.xlsx)")[0]
+            filename = \
+                QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', directory=fi,
+                                                      filter="CSV (*.csv) ;; Excel (*.xlsx)")[0]
 
-        if ".xlsx" in filename:
-            self.mod_data.to_excel(filename)
+            if ".xlsx" in filename:
+                self.mod_data.to_excel(filename)
+            else:
+                self.mod_data.to_csv(filename)
+
+            self.statusBar().showMessage("File saved!", 5000)
         else:
-            self.mod_data.to_csv(filename)
-
-        self.statusBar().showMessage("File saved!", 5000)
+            self.statusBar().showMessage("Data file has not been selected yet!", 5000)
 
     def popup_error_msg(self):
         msg = QMessageBox()
