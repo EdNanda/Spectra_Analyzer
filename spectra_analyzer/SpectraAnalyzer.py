@@ -130,7 +130,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.infoMenu = QAction("&About", self)
 
         file_PL_options = [
-            {"name": "Open single file (&Automatic)", "shortcut": "Ctrl+O", "callback": self.menu_load_single_matrix},
+            {"name": "Open file (Matrix)", "shortcut": "Ctrl+O", "callback": self.menu_load_single_matrix},
             {"name": "Open folder (Multiple &files)", "shortcut": "Ctrl+U", "callback": self.menu_load_PL_folder},
         ]
         file_XRD_options = [
@@ -540,8 +540,6 @@ class MainWindow(QtWidgets.QMainWindow):
                                 pass
         else:
             self.statusBar().showMessage("Fit parameter file not loaded", 5000)
-            # raise Exception("Fit parameter file not loaded")
-            # return
 
     def save_heatplot_giwaxs(self):
         if not self.init_data.empty:
@@ -659,9 +657,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.file_path = directory[0]
             file_text = directory[0].rsplit("/", 1)
             self.folder_path = file_text[0] + "/"
-            # print(self.folder_path)
             self.sample_name = file_text[1].split(".")[0]
-            # print(self.sample_name)
 
             self.is_file_selected = True
         else:
@@ -980,40 +976,69 @@ class MainWindow(QtWidgets.QMainWindow):
         self.dlg.setWindowModality(Qt.ApplicationModal)
         self.dlg.exec_()
 
+    def find_separators_in_file(self, file_path):
+        symbols = [",", "\t", ";", " ", "  ", "   ", "    "]
+        with open(file_path, "r") as file:
+            lines = file.readlines()
+        size = len(lines)
+
+        amount = []
+        if size > 50:
+            for sy in symbols:
+                amount.append(lines[int(size / 2)].count(sy))
+
+            del_count = max(amount)
+            del_second = sorted(amount, reverse=True)[1]  # To check if comma digit separator
+            if del_count == del_second + 1:
+                sym_delim = symbols[amount.index(del_second)]
+                sym_max = del_second
+            else:
+                sym_delim = symbols[amount.index(del_count)]
+                sym_max = del_count
+
+            for index, line in enumerate(lines):
+                if line.count(sym_delim) == sym_max:
+                    break
+
+            return index, sym_delim
+
+        else:
+            print("File row length is too small")
+            raise Exception("Check data file for inconsistent symbols")
+
+#todo add a load_single_array
     def load_single_matrix_file(self):
         self.statusBar().showMessage("Loading file, please be patient...")
+
         if "xlsx" in self.file_path[-5:]:
             self.init_data = pd.read_excel(self.file_path, index_col=0, header=0)
         else:
-            try:  # load standard matrix file
+            found_sep, symbol = self.find_separators_in_file(self.file_path)
+
+            if found_sep > 0:
+                self.init_data = pd.read_csv(self.file_path, index_col=0, skiprows=found_sep, header=0,
+                                             delimiter=symbol, engine="python")
+
+                # When Dark&Bright, do the math to display the raw data properly
+                if self.init_data.keys()[1] == "Bright spectra":
+                    sd = self.init_data.iloc[:, 2:].subtract(self.init_data["Dark spectra"], axis="index")
+                    bd = self.init_data["Bright spectra"] - self.init_data["Dark spectra"]
+                    fn = 1 - sd.divide(bd, axis="index")
+
+                    # filter extreme values
+                    val = 10  # This is the extreme value
+                    fn.values[fn.values > val] = val
+                    fn.values[fn.values < -val] = -val
+                    self.init_data = fn
+                elif self.init_data.keys()[0] == "Dark spectra":
+                    sd = self.init_data.iloc[:, 2:].subtract(self.init_data["Dark spectra"], axis="index")
+                    self.init_data = sd
+                else:
+                    pass
+            else:
                 self.init_data = pd.read_csv(self.file_path, index_col=0, skiprows=None, header=0,
-                                             delimiter="\t", engine="python")
-                if not self.init_data.shape[1] != 0:
-                    try:
-                        self.init_data = pd.read_csv(self.file_path, index_col=0, skiprows=21, header=0,
-                                                     delimiter=",", engine="python")
-                    except:
-                        self.init_data = pd.read_csv(self.file_path, index_col=0, skiprows=22, header=0,
-                                                     delimiter=",", engine="python")
-                    # When Dark&Bright, do the math to display the raw data properly
-                    if self.init_data.keys()[1] == "Bright spectra":
-                        sd = self.init_data.iloc[:, 2:].subtract(self.init_data["Dark spectra"], axis="index")
-                        bd = self.init_data["Bright spectra"] - self.init_data["Dark spectra"]
-                        fn = 1 - sd.divide(bd, axis="index")
+                                             delimiter=symbol, engine="python")
 
-                        # filter extreme values
-                        val = 10  # This is the extreme value
-                        fn.values[fn.values > val] = val
-                        fn.values[fn.values < -val] = -val
-                        self.init_data = fn
-                    elif self.init_data.keys()[0] == "Dark spectra":
-                        sd = self.init_data.iloc[:, 2:].subtract(self.init_data["Dark spectra"], axis="index")
-                        self.init_data = sd
-                    else:
-                        pass
-
-            except:
-                self.popup_read_file()
             self.statusBar().showMessage("")
 
     def set_default_fitting_range(self):
