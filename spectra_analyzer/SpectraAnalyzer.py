@@ -389,7 +389,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.create_mod_data()
         self.extract_data_for_axis()
         self.statusBar().showMessage("Loading files, please wait...")
-        # self.plot_full_reset()
         self.plot_setup()
         self.set_default_fitting_range()
         self.ScrollbarTime.setMaximum(self.xsize)
@@ -670,23 +669,17 @@ class MainWindow(QtWidgets.QMainWindow):
             self.statusBar().showMessage("File not selected", 5000)
 
     def select_folder(self):
-        # print("  select_folder")
         self.folder_path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select a directory')
 
         if self.folder_path != "":  # If folder selected, then
             self.is_file_selected = True
             self.folder_path = self.folder_path + "/"
-            # print(self.folder_path)
-            file_list = glob(self.folder_path)  # Get all files
-            self.sample_name = self.folder_path.split("/")[-2]
-            # print(self.sample_name)
+            file_list = glob(self.folder_path+"*")  # Get all files
             input_file = []
 
             for p in file_list:  # Keep only log files (for giwaxs)
                 if "." not in p[-5:] and "Fitting" not in p:
                     input_file.append(p)
-                else:
-                    pass
 
             self.giw_names = []
             for f in input_file:
@@ -864,9 +857,9 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             fnum = 0
 
-        self.gname = self.giw_names[fnum]
-        dummy_folderpath_file = self.folder_path + "/" + self.gname
-        input1 = open(dummy_folderpath_file, 'rb')
+        self.sample_name = self.giw_names[fnum]
+        log_file = self.folder_path + self.sample_name
+        input1 = open(log_file, 'rb')
         with input1 as f:
             lines = f.readlines()
 
@@ -912,14 +905,14 @@ class MainWindow(QtWidgets.QMainWindow):
         end_times = []
         self.separated = []
         for c, t in enumerate(times):
-            data = pd.read_csv(dummy_folderpath_file, delimiter=" ", skiprows=starts[c] + 1, header=None,
+            data = pd.read_csv(log_file, delimiter=" ", skiprows=starts[c] + 1, header=None,
                                nrows=ends[c] - starts[c] - 1)
             data.columns = head
 
             if c == 0:
                 combined = data
             else:
-                if "eta" in dummy_folderpath_file:
+                if "eta" in log_file:
                     pass
                 else:
                     end_times.append(data.Time.iloc[-1])
@@ -932,7 +925,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Gather measurement data using pandas
         pd.set_option('mode.chained_assignment', None)  # ignores an error message
-        for counter, gf in enumerate(glob(dummy_folderpath_file + "_[0-9]*.dat")):
+        for counter, gf in enumerate(glob(log_file + "_[0-9]*.dat")):
             # Read data from file
             Mdata = pd.read_csv(gf, index_col=None, skiprows=15, header=None, delimiter="\t")
             raw_dat = Mdata[[0, 1]]
@@ -946,15 +939,20 @@ class MainWindow(QtWidgets.QMainWindow):
         self.init_data = self.init_data.set_index("TTh")
         # print(self.mdata)
 
-        if "eta" in dummy_folderpath_file:
+        if "eta" in log_file:
             self.init_data.columns = [combined.eta, combined.DegC]
             self.comb_data = combined[["eta", "DegC"]]
         else:
             self.init_data.columns = [combined.Time, combined.DegC]
             self.comb_data = combined[["Time", "DegC"]]
 
+        print(self.init_data)
+
     def extract_data_for_axis(self):
-        self.xarray = self.mod_data.keys().values.astype(float)
+        if self.is_giwaxs:
+            self.xarray = self.mod_data.columns.get_level_values(0).astype(float)
+        else:
+            self.xarray = self.mod_data.keys().values.astype(float)
         self.xsize = len(self.xarray) - 1
 
         self.max_int = self.mod_data.to_numpy().max()
@@ -1855,16 +1853,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.axes.set_ylabel('Intensity (a.u.)')
         self.canvas.axes.grid(True, linestyle='--')
 
-    def plot_full_reset(self):
-        # try:
-        #     self.canvas.axes.clf()
-        #     self.savnac.axes.clf()
-        # except:
-        #     pass
-        # self.canvas = MplCanvas(self)
-        # self.savnac = MplCanvas_heatplot(self)
-        self.canvas.axes.cla()
-        # self.savnac.axes.cla()
     def plot_setup(self):
         self.setWindowTitle("Spectra Analyzer (" + self.sample_name + ")")
         self.mod_data = self.matrixdat # Stupidly necessary because otherwise mod_data does not update
