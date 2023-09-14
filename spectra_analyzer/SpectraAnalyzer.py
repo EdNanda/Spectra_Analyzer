@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import QGridLayout, QVBoxLayout, QHBoxLayout, QSpacerItem, 
 from PyQt5.QtWidgets import QScrollBar, QToolButton, QLabel, QComboBox, QLineEdit, QMenu, QPushButton
 from PyQt5.QtWidgets import QDialog, QFormLayout, QDialogButtonBox, QAction, QCheckBox, QMessageBox
 from PyQt5.QtCore import Qt, QObject, pyqtSignal, QRunnable, pyqtSlot, QThreadPool
-from PyQt5.QtGui import QFont, QIcon
+from PyQt5.QtGui import QFont, QIcon, QIntValidator
 from qtrangeslider import QRangeSlider
 from qtrangeslider .qtcompat import QtCore
 #from QtRangeSlider .qtcompat import QtWidgets as QtW
@@ -324,8 +324,6 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.is_file_selected:
             self.reset_mod_init_data()
             self.load_single_matrix_file()
-            self.create_mod_data()
-            self.extract_data_for_axis()
             self.menu_load_successful()
         else:
             self.statusBar().showMessage("File not selected", 5000)
@@ -337,9 +335,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.reset_mod_init_data()
             self.popup_read_file()
             self.popup_test_file_slow()
-            self.create_mod_data()
             try:
-                self.extract_data_for_axis()
                 self.menu_load_successful()
             except:
                 self.statusBar().showMessage("ERROR: All column names should be numbers in manual mode!!", 5000)
@@ -348,16 +344,26 @@ class MainWindow(QtWidgets.QMainWindow):
             self.statusBar().showMessage("File not selected", 5000)
 
     def menu_load_PL_folder(self):
-        self.select_folder()
+        self.select_file()
         self.is_giwaxs = False
+        self.reset_mod_init_data()
+        msg = "File not selected"
         if self.is_file_selected:
-            self.reset_mod_init_data()
-            self.pl_folder_gather_data()
-            self.create_mod_data()
-            self.extract_data_for_axis()
-            self.menu_load_successful()
+            is_bool, msg = self.load_separate_data_files()
+            if is_bool:
+                self.menu_load_successful()
         else:
-            self.statusBar().showMessage("Folder not selected", 5000)
+            self.statusBar().showMessage(msg, 5000)
+        # self.select_folder()
+        # self.is_giwaxs = False
+        # if self.is_file_selected:
+        #     self.reset_mod_init_data()
+        #     self.pl_folder_gather_data()
+        #     self.create_mod_data()
+        #     self.extract_data_for_axis()
+        #     self.menu_load_successful()
+        # else:
+        #     self.statusBar().showMessage("Folder not selected", 5000)
 
     def menu_load_giwaxs_w_log(self):
         self.is_giwaxs = True
@@ -365,8 +371,6 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.is_file_selected:
             self.reset_mod_init_data()
             self.popup_giwaxs_w_log()
-            self.create_mod_data()
-            self.extract_data_for_axis()
             self.menu_load_successful()
         else:
             self.statusBar().showMessage("Folder not selected", 5000)
@@ -377,14 +381,15 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.is_file_selected:
             self.reset_mod_init_data()
             self.separate_xrd_gather_data()
-            self.create_mod_data()
-            self.extract_data_for_axis()
             self.menu_load_successful()
         else:
             self.statusBar().showMessage("Folder not selected", 5000)
 
     def menu_load_successful(self):
+        self.create_mod_data()
+        self.extract_data_for_axis()
         self.statusBar().showMessage("Loading files, please wait...")
+        # self.plot_full_reset()
         self.plot_setup()
         self.set_default_fitting_range()
         self.ScrollbarTime.setMaximum(self.xsize)
@@ -456,7 +461,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.mod_data = self.init_data.copy()
 
     def reset_mod_init_data(self):
-        self.init_data= pd.DataFrame()
+        self.init_data = pd.DataFrame()
         self.mod_data = pd.DataFrame()
 
 
@@ -745,6 +750,82 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.statusBar().showMessage("")
 
+    def popup_load_separate(self, datasets):
+        self.dgiw = QDialog()
+        Lopt = QVBoxLayout()
+        Lopt.setAlignment(Qt.AlignCenter)
+
+        Tdats = QLabel(f"A total of {datasets} data files were found")
+        Lopt.addWidget(Tdats)
+
+        layout = QFormLayout()
+
+        self.fdpline = QLineEdit()
+        self.fdpline.setValidator(QIntValidator())
+        self.fdpline.setText("1")
+        self.fdpline.setToolTip("In a program like Notepad++, find the line where the\n"
+                          "first data pair appears, excluding the header or metadata,\n"
+                          "and write that line number here")
+        layout.addRow("First data-pair line", self.fdpline)
+        Lopt.addLayout(layout)
+
+        Bok = QDialogButtonBox(QDialogButtonBox.Ok)
+        Lopt.addWidget(Bok)
+        Bok.accepted.connect(self.popup_load_accept)
+
+        self.dgiw.setLayout(Lopt)
+        self.dgiw.setWindowTitle("Find data")
+        self.dgiw.setWindowModality(Qt.ApplicationModal)
+        self.dgiw.exec_()
+
+    def popup_load_accept(self):
+        self.dgiw.accept()
+
+    def load_separate_data_files(self):
+        is_continue = True
+        error_msg = ""
+        extension = self.file_path.rsplit(".")[-1]
+        separated_files = sorted(glob(self.folder_path + "*." + extension))
+
+        if len(separated_files) < 2:
+            is_continue = False
+            error_msg = "Error: not enough files"
+
+        self.popup_load_separate(len(separated_files))
+        start_line = int(self.fdpline.text())
+        skpr = start_line - 1
+        _, sym = self.find_separators_in_file(separated_files[0])
+
+        for counter, sf in enumerate(separated_files):
+            try:
+                data = pd.read_csv(sf, delimiter=sym, skiprows=skpr, header=None,# names=["index", counter],
+                                   index_col=False)
+                data = data.dropna(how='all', axis=1)
+            except:
+                is_continue = False
+                error_msg = "Error: Something is wrong with the files, cannot read"
+                break
+
+            if data.shape[1] > 2:
+                print(data.shape[0],data.shape[1],data.shape[-1])
+                is_continue = False
+                error_msg = "Error: Too many data columns on files"
+                break
+            else:
+                names = ["index", counter]
+                data.columns = names + data.columns[2:].tolist()
+
+            if counter == 0:
+                self.init_data = data
+            else:
+                self.init_data = self.init_data.join(data.set_index("index"), on="index")
+
+        if is_continue:
+            self.init_data.set_index("index", inplace=True)
+
+
+        return is_continue, error_msg
+
     def pl_folder_gather_data(self):
         pl_files = sorted(glob(self.folder_path + "\\*.txt"), key=os.path.getmtime)
 
@@ -880,7 +961,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.min_int = self.mod_data.to_numpy().min()
 
         self.yarray = self.mod_data.index
+        self.yfirst = self.mod_data.iloc[:, [0]]
         self.ysize = len(self.yarray)
+        self.matrixdat = self.mod_data
 
         self.range_slider.setMaximum(self.ysize)
         self.range_slider.setValue((0, self.ysize))
@@ -989,7 +1072,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
             del_count = max(amount)
             del_second = sorted(amount, reverse=True)[1]  # To check if comma digit separator
-            if del_count == del_second + 1:
+            if del_count == del_second + 1 and del_count > 1:
                 sym_delim = symbols[amount.index(del_second)]
                 sym_max = del_second
             else:
@@ -1655,10 +1738,10 @@ class MainWindow(QtWidgets.QMainWindow):
         if not self.init_data.empty:
             # set variables
             hc = (4.135667696E-15) * (2.999792E8) * 1E9
-            eV_conv = hc / self.mod_data.index
+            eV_conv = hc / self.yarray
 
             # Make conversion of database and index
-            ev_df = self.mod_data.multiply(self.mod_data.index.values ** 2, axis="index") / hc
+            ev_df = self.mod_data.multiply(self.yarray.values ** 2, axis="index") / hc
 
             ev_df = ev_df.set_index(eV_conv)
             ev_df.index.names = ["Energy"]
@@ -1733,11 +1816,9 @@ class MainWindow(QtWidgets.QMainWindow):
         col_mean = self.init_data.iloc[:, left_b:right_b].mean(axis=1)
         # Subtract mean to all dataset
         clean_data = self.init_data.subtract(col_mean, "index")
-
         # Rename mdata (this is what is always plotted)
         self.mod_data = clean_data.copy()
         self.is_subtract = True
-
         # Update plot
         self.extract_data_for_axis()
         self.plot_setup()
@@ -1748,7 +1829,6 @@ class MainWindow(QtWidgets.QMainWindow):
             # Rename mdata (this is what is always plotted)
             self.init_data = self.mod_data.copy()
             self.create_mod_data()
-
             # Update plot
             self.extract_data_for_axis()
             self.plot_setup()
@@ -1760,10 +1840,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def subtract_background_cancel(self):
         self.is_subtract = False
-        # Rename mdata (this is what is always plotted)
-        #self.init_data = clean_data
         self.create_mod_data()
-
         # Update plot
         self.extract_data_for_axis()
         self.plot_setup()
@@ -1778,8 +1855,19 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.axes.set_ylabel('Intensity (a.u.)')
         self.canvas.axes.grid(True, linestyle='--')
 
+    def plot_full_reset(self):
+        # try:
+        #     self.canvas.axes.clf()
+        #     self.savnac.axes.clf()
+        # except:
+        #     pass
+        # self.canvas = MplCanvas(self)
+        # self.savnac = MplCanvas_heatplot(self)
+        self.canvas.axes.cla()
+        # self.savnac.axes.cla()
     def plot_setup(self):
         self.setWindowTitle("Spectra Analyzer (" + self.sample_name + ")")
+        self.mod_data = self.matrixdat # Stupidly necessary because otherwise mod_data does not update
 
         try:
             self.canvas.axes.cla()
@@ -1790,8 +1878,8 @@ class MainWindow(QtWidgets.QMainWindow):
             pass
 
         # First plot
-        self._plot_ref, = self.canvas.axes.plot(self.yarray, self.mod_data.iloc[:, [0]], 'r', label="Experiment")
-        index_name = self.mod_data.index.name
+        self._plot_ref, = self.canvas.axes.plot(self.yarray, self.yfirst, 'r', label="Experiment")
+        index_name = self.yarray.name
 
         if "0.000" in index_name:
             axis_name = "Wavelength (nm)"
@@ -1832,6 +1920,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ax2 = self.savnac.axes.twinx()
 
         self._plot_heat = self.savnac.axes.pcolorfast(self.mod_data)  # 2D heatplot
+        # self._plot_heat = self.savnac.axes.pcolorfast(self.matrixdat)
         self._plot_vline, = self.savnac.axes.plot([0, 0], [0, self.ysize], 'r')  # Vertical line (Time select)
         self._plot_hline1, = self.savnac.axes.plot([0, self.xsize], [0, 0], 'b')  # Horizontal line1 (Up boundary)
         self._plot_hline2, = self.savnac.axes.plot([0, self.xsize], [0, 0], 'b')  # Horizontal line2 (Down boundary)
@@ -2137,7 +2226,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.bar_update_plots(bar)
 
     def bar_update_plots(self, bar):
-        self._plot_ref.set_xdata(self.mod_data.index.values)
+        self._plot_ref.set_xdata(self.yarray.values)
         self._plot_ref.set_ydata(self.mod_data.iloc[:, [bar]].T.values[0])
 
         try:
