@@ -1,5 +1,5 @@
-__author__ = "Edgar Nandayapa"
-__version__ = "1.15 (2022)"
+__author__ = "Edgar R. Nandayapa"
+__version__ = "1.2 (2023)"
 
 import sys
 import os
@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import QGridLayout, QVBoxLayout, QHBoxLayout, QSpacerItem, 
 from PyQt5.QtWidgets import QScrollBar, QToolButton, QLabel, QComboBox, QLineEdit, QMenu, QPushButton
 from PyQt5.QtWidgets import QDialog, QFormLayout, QDialogButtonBox, QAction, QCheckBox, QMessageBox
 from PyQt5.QtCore import Qt, QObject, pyqtSignal, QRunnable, pyqtSlot, QThreadPool
-from PyQt5.QtGui import QFont, QIcon
+from PyQt5.QtGui import QFont, QIcon, QIntValidator
 from qtrangeslider import QRangeSlider
 from qtrangeslider .qtcompat import QtCore
 #from QtRangeSlider .qtcompat import QtWidgets as QtW
@@ -130,13 +130,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.infoMenu = QAction("&About", self)
 
         file_PL_options = [
-            {"name": "Open single file (&Automatic)", "shortcut": "Ctrl+O", "callback": self.menu_load_single_matrix},
-            {"name": "Open folder (Multiple &files)", "shortcut": "Ctrl+U", "callback": self.menu_load_PL_folder},
+            {"name": "Open single file (One &matrix)", "shortcut": "Ctrl+O", "callback": self.menu_load_single_matrix},
+            {"name": "Open separated files (Multiple &arrays)", "shortcut": "Ctrl+U", "callback": self.menu_load_PL_folder},
         ]
         file_XRD_options = [
-            {"name": "Open single file (&Manual)", "shortcut": "Ctrl+M", "callback": self.menu_load_single_manual},
-            {"name": "Open folder w/ &Log files", "shortcut": "Ctrl+P", "callback": self.menu_load_giwaxs_w_log},
-            {"name": "Open folder (Multiple f&iles)", "shortcut": "", "callback": self.menu_load_xrd_separated},
+            #{"name": "Open single file (&Manual)", "shortcut": "Ctrl+M", "callback": self.menu_load_single_manual},
+            {"name": "&GIWAXS: folder w/ Log files", "shortcut": "Ctrl+G", "callback": self.menu_load_giwaxs_w_log},
+            #{"name": "Open folder (Multiple f&iles)", "shortcut": "", "callback": self.menu_load_xrd_separated},
 
         ]
         fileMenu = mainMenu.addMenu("&File")
@@ -146,7 +146,7 @@ class MainWindow(QtWidgets.QMainWindow):
         fileMenu.addSeparator()
         # b = fileMenu.addAction("GIWAXS")
         # b.setDisabled(True)
-        special = fileMenu.addMenu("Special")
+        special = fileMenu.addMenu("&Special")
         self.GUI_menu_builder(file_XRD_options, special)
 
         fit_set_options = [
@@ -167,16 +167,16 @@ class MainWindow(QtWidgets.QMainWindow):
             {"name": "Convert to &Energy (eV)", "shortcut": "", "callback": self.convert_to_eV},
         ]
         functions_2 = [
+            {"name": "Rename plots axis", "shortcut": "", "callback": self.rename_plot_axis},
+            {"name": "Set heatplot &color range", "shortcut": "", "callback": self.popup_heatplot_color_range},
             {"name": "Clean &dead Pixel (831nm)", "shortcut": "", "callback": self.clean_dead_pixel},
             {"name": "Subtract &background", "shortcut": "", "callback": self.popup_subtract_bkgd},
-            {"name": "Set heatplot &color range", "shortcut": "", "callback": self.popup_heatplot_color_range},
         ]
         functions_3 = [
             {"name": "Save &fitting curves only", "shortcut": "", "callback": self.save_snapshot_data},
             {"name": "Save &current matrix dataset", "shortcut": "", "callback": self.save_current_matrix_state},
             {"name": "Save &initial matrix dataset", "shortcut": "", "callback": self.save_data_2DMatrix},
             {"name": "Save &heatplot as png", "shortcut": "", "callback": self.save_heatplot_giwaxs},
-            {"name": "Rename plots axis", "shortcut": "", "callback": self.rename_plot_axis},
         ]
         otherMenu = mainMenu.addMenu("&Other")
         self.GUI_menu_builder(functions_1, otherMenu)
@@ -324,8 +324,6 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.is_file_selected:
             self.reset_mod_init_data()
             self.load_single_matrix_file()
-            self.create_mod_data()
-            self.extract_data_for_axis()
             self.menu_load_successful()
         else:
             self.statusBar().showMessage("File not selected", 5000)
@@ -337,9 +335,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.reset_mod_init_data()
             self.popup_read_file()
             self.popup_test_file_slow()
-            self.create_mod_data()
             try:
-                self.extract_data_for_axis()
                 self.menu_load_successful()
             except:
                 self.statusBar().showMessage("ERROR: All column names should be numbers in manual mode!!", 5000)
@@ -348,16 +344,26 @@ class MainWindow(QtWidgets.QMainWindow):
             self.statusBar().showMessage("File not selected", 5000)
 
     def menu_load_PL_folder(self):
-        self.select_folder()
+        self.select_file()
         self.is_giwaxs = False
+        self.reset_mod_init_data()
+        msg = "File not selected"
         if self.is_file_selected:
-            self.reset_mod_init_data()
-            self.pl_folder_gather_data()
-            self.create_mod_data()
-            self.extract_data_for_axis()
-            self.menu_load_successful()
+            is_bool, msg = self.load_separate_data_files()
+            if is_bool:
+                self.menu_load_successful()
         else:
-            self.statusBar().showMessage("Folder not selected", 5000)
+            self.statusBar().showMessage(msg, 5000)
+        # self.select_folder()
+        # self.is_giwaxs = False
+        # if self.is_file_selected:
+        #     self.reset_mod_init_data()
+        #     self.pl_folder_gather_data()
+        #     self.create_mod_data()
+        #     self.extract_data_for_axis()
+        #     self.menu_load_successful()
+        # else:
+        #     self.statusBar().showMessage("Folder not selected", 5000)
 
     def menu_load_giwaxs_w_log(self):
         self.is_giwaxs = True
@@ -365,8 +371,6 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.is_file_selected:
             self.reset_mod_init_data()
             self.popup_giwaxs_w_log()
-            self.create_mod_data()
-            self.extract_data_for_axis()
             self.menu_load_successful()
         else:
             self.statusBar().showMessage("Folder not selected", 5000)
@@ -377,13 +381,13 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.is_file_selected:
             self.reset_mod_init_data()
             self.separate_xrd_gather_data()
-            self.create_mod_data()
-            self.extract_data_for_axis()
             self.menu_load_successful()
         else:
             self.statusBar().showMessage("Folder not selected", 5000)
 
     def menu_load_successful(self):
+        self.create_mod_data()
+        self.extract_data_for_axis()
         self.statusBar().showMessage("Loading files, please wait...")
         self.plot_setup()
         self.set_default_fitting_range()
@@ -456,7 +460,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.mod_data = self.init_data.copy()
 
     def reset_mod_init_data(self):
-        self.init_data= pd.DataFrame()
+        self.init_data = pd.DataFrame()
         self.mod_data = pd.DataFrame()
 
 
@@ -540,8 +544,6 @@ class MainWindow(QtWidgets.QMainWindow):
                                 pass
         else:
             self.statusBar().showMessage("Fit parameter file not loaded", 5000)
-            # raise Exception("Fit parameter file not loaded")
-            # return
 
     def save_heatplot_giwaxs(self):
         if not self.init_data.empty:
@@ -659,9 +661,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.file_path = directory[0]
             file_text = directory[0].rsplit("/", 1)
             self.folder_path = file_text[0] + "/"
-            # print(self.folder_path)
             self.sample_name = file_text[1].split(".")[0]
-            # print(self.sample_name)
 
             self.is_file_selected = True
         else:
@@ -669,23 +669,17 @@ class MainWindow(QtWidgets.QMainWindow):
             self.statusBar().showMessage("File not selected", 5000)
 
     def select_folder(self):
-        # print("  select_folder")
         self.folder_path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select a directory')
 
         if self.folder_path != "":  # If folder selected, then
             self.is_file_selected = True
             self.folder_path = self.folder_path + "/"
-            # print(self.folder_path)
-            file_list = glob(self.folder_path)  # Get all files
-            self.sample_name = self.folder_path.split("/")[-2]
-            # print(self.sample_name)
+            file_list = glob(self.folder_path+"*")  # Get all files
             input_file = []
 
             for p in file_list:  # Keep only log files (for giwaxs)
                 if "." not in p[-5:] and "Fitting" not in p:
                     input_file.append(p)
-                else:
-                    pass
 
             self.giw_names = []
             for f in input_file:
@@ -749,6 +743,82 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.statusBar().showMessage("")
 
+    def popup_load_separate(self, datasets):
+        self.dgiw = QDialog()
+        Lopt = QVBoxLayout()
+        Lopt.setAlignment(Qt.AlignCenter)
+
+        Tdats = QLabel(f"A total of {datasets} data files were found")
+        Lopt.addWidget(Tdats)
+
+        layout = QFormLayout()
+
+        self.fdpline = QLineEdit()
+        self.fdpline.setValidator(QIntValidator())
+        self.fdpline.setText("1")
+        self.fdpline.setToolTip("In a program like Notepad++, find the line where the\n"
+                          "first data pair appears, excluding the header or metadata,\n"
+                          "and write that line number here")
+        layout.addRow("First data-pair line", self.fdpline)
+        Lopt.addLayout(layout)
+
+        Bok = QDialogButtonBox(QDialogButtonBox.Ok)
+        Lopt.addWidget(Bok)
+        Bok.accepted.connect(self.popup_load_accept)
+
+        self.dgiw.setLayout(Lopt)
+        self.dgiw.setWindowTitle("Find data")
+        self.dgiw.setWindowModality(Qt.ApplicationModal)
+        self.dgiw.exec_()
+
+    def popup_load_accept(self):
+        self.dgiw.accept()
+
+    def load_separate_data_files(self):
+        is_continue = True
+        error_msg = ""
+        extension = self.file_path.rsplit(".")[-1]
+        separated_files = sorted(glob(self.folder_path + "*." + extension))
+
+        if len(separated_files) < 2:
+            is_continue = False
+            error_msg = "Error: not enough files"
+
+        self.popup_load_separate(len(separated_files))
+        start_line = int(self.fdpline.text())
+        skpr = start_line - 1
+        _, sym = self.find_separators_in_file(separated_files[0])
+
+        for counter, sf in enumerate(separated_files):
+            try:
+                data = pd.read_csv(sf, delimiter=sym, skiprows=skpr, header=None,# names=["index", counter],
+                                   index_col=False)
+                data = data.dropna(how='all', axis=1)
+            except:
+                is_continue = False
+                error_msg = "Error: Something is wrong with the files, cannot read"
+                break
+
+            if data.shape[1] > 2:
+                print(data.shape[0],data.shape[1],data.shape[-1])
+                is_continue = False
+                error_msg = "Error: Too many data columns on files"
+                break
+            else:
+                names = ["index", counter]
+                data.columns = names + data.columns[2:].tolist()
+
+            if counter == 0:
+                self.init_data = data
+            else:
+                self.init_data = self.init_data.join(data.set_index("index"), on="index")
+
+        if is_continue:
+            self.init_data.set_index("index", inplace=True)
+
+
+        return is_continue, error_msg
+
     def pl_folder_gather_data(self):
         pl_files = sorted(glob(self.folder_path + "\\*.txt"), key=os.path.getmtime)
 
@@ -787,9 +857,9 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             fnum = 0
 
-        self.gname = self.giw_names[fnum]
-        dummy_folderpath_file = self.folder_path + "/" + self.gname
-        input1 = open(dummy_folderpath_file, 'rb')
+        self.sample_name = self.giw_names[fnum]
+        log_file = self.folder_path + self.sample_name
+        input1 = open(log_file, 'rb')
         with input1 as f:
             lines = f.readlines()
 
@@ -835,14 +905,14 @@ class MainWindow(QtWidgets.QMainWindow):
         end_times = []
         self.separated = []
         for c, t in enumerate(times):
-            data = pd.read_csv(dummy_folderpath_file, delimiter=" ", skiprows=starts[c] + 1, header=None,
+            data = pd.read_csv(log_file, delimiter=" ", skiprows=starts[c] + 1, header=None,
                                nrows=ends[c] - starts[c] - 1)
             data.columns = head
 
             if c == 0:
                 combined = data
             else:
-                if "eta" in dummy_folderpath_file:
+                if "eta" in log_file:
                     pass
                 else:
                     end_times.append(data.Time.iloc[-1])
@@ -855,7 +925,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Gather measurement data using pandas
         pd.set_option('mode.chained_assignment', None)  # ignores an error message
-        for counter, gf in enumerate(glob(dummy_folderpath_file + "_[0-9]*.dat")):
+        for counter, gf in enumerate(glob(log_file + "_[0-9]*.dat")):
             # Read data from file
             Mdata = pd.read_csv(gf, index_col=None, skiprows=15, header=None, delimiter="\t")
             raw_dat = Mdata[[0, 1]]
@@ -869,22 +939,29 @@ class MainWindow(QtWidgets.QMainWindow):
         self.init_data = self.init_data.set_index("TTh")
         # print(self.mdata)
 
-        if "eta" in dummy_folderpath_file:
+        if "eta" in log_file:
             self.init_data.columns = [combined.eta, combined.DegC]
             self.comb_data = combined[["eta", "DegC"]]
         else:
             self.init_data.columns = [combined.Time, combined.DegC]
             self.comb_data = combined[["Time", "DegC"]]
 
+        print(self.init_data)
+
     def extract_data_for_axis(self):
-        self.xarray = self.mod_data.keys().values.astype(float)
+        if self.is_giwaxs:
+            self.xarray = self.mod_data.columns.get_level_values(0).astype(float)
+        else:
+            self.xarray = self.mod_data.keys().values.astype(float)
         self.xsize = len(self.xarray) - 1
 
         self.max_int = self.mod_data.to_numpy().max()
         self.min_int = self.mod_data.to_numpy().min()
 
         self.yarray = self.mod_data.index
+        self.yfirst = self.mod_data.iloc[:, [0]]
         self.ysize = len(self.yarray)
+        self.matrixdat = self.mod_data
 
         self.range_slider.setMaximum(self.ysize)
         self.range_slider.setValue((0, self.ysize))
@@ -980,40 +1057,69 @@ class MainWindow(QtWidgets.QMainWindow):
         self.dlg.setWindowModality(Qt.ApplicationModal)
         self.dlg.exec_()
 
+    def find_separators_in_file(self, file_path):
+        symbols = [",", "\t", ";", " ", "  ", "   ", "    "]
+        with open(file_path, "r") as file:
+            lines = file.readlines()
+        size = len(lines)
+
+        amount = []
+        if size > 50:
+            for sy in symbols:
+                amount.append(lines[int(size / 2)].count(sy))
+
+            del_count = max(amount)
+            del_second = sorted(amount, reverse=True)[1]  # To check if comma digit separator
+            if del_count == del_second + 1 and del_count > 1:
+                sym_delim = symbols[amount.index(del_second)]
+                sym_max = del_second
+            else:
+                sym_delim = symbols[amount.index(del_count)]
+                sym_max = del_count
+
+            for index, line in enumerate(lines):
+                if line.count(sym_delim) == sym_max:
+                    break
+
+            return index, sym_delim
+
+        else:
+            print("File row length is too small")
+            raise Exception("Check data file for inconsistent symbols")
+
+#todo add a load_single_array
     def load_single_matrix_file(self):
         self.statusBar().showMessage("Loading file, please be patient...")
+
         if "xlsx" in self.file_path[-5:]:
             self.init_data = pd.read_excel(self.file_path, index_col=0, header=0)
         else:
-            try:  # load standard matrix file
+            found_sep, symbol = self.find_separators_in_file(self.file_path)
+
+            if found_sep > 0:
+                self.init_data = pd.read_csv(self.file_path, index_col=0, skiprows=found_sep, header=0,
+                                             delimiter=symbol, engine="python")
+
+                # When Dark&Bright, do the math to display the raw data properly
+                if self.init_data.keys()[1] == "Bright spectra":
+                    sd = self.init_data.iloc[:, 2:].subtract(self.init_data["Dark spectra"], axis="index")
+                    bd = self.init_data["Bright spectra"] - self.init_data["Dark spectra"]
+                    fn = 1 - sd.divide(bd, axis="index")
+
+                    # filter extreme values
+                    val = 10  # This is the extreme value
+                    fn.values[fn.values > val] = val
+                    fn.values[fn.values < -val] = -val
+                    self.init_data = fn
+                elif self.init_data.keys()[0] == "Dark spectra":
+                    sd = self.init_data.iloc[:, 2:].subtract(self.init_data["Dark spectra"], axis="index")
+                    self.init_data = sd
+                else:
+                    pass
+            else:
                 self.init_data = pd.read_csv(self.file_path, index_col=0, skiprows=None, header=0,
-                                             delimiter="\t", engine="python")
-                if not self.init_data.shape[1] != 0:
-                    try:
-                        self.init_data = pd.read_csv(self.file_path, index_col=0, skiprows=21, header=0,
-                                                     delimiter=",", engine="python")
-                    except:
-                        self.init_data = pd.read_csv(self.file_path, index_col=0, skiprows=22, header=0,
-                                                     delimiter=",", engine="python")
-                    # When Dark&Bright, do the math to display the raw data properly
-                    if self.init_data.keys()[1] == "Bright spectra":
-                        sd = self.init_data.iloc[:, 2:].subtract(self.init_data["Dark spectra"], axis="index")
-                        bd = self.init_data["Bright spectra"] - self.init_data["Dark spectra"]
-                        fn = 1 - sd.divide(bd, axis="index")
+                                             delimiter=symbol, engine="python")
 
-                        # filter extreme values
-                        val = 10  # This is the extreme value
-                        fn.values[fn.values > val] = val
-                        fn.values[fn.values < -val] = -val
-                        self.init_data = fn
-                    elif self.init_data.keys()[0] == "Dark spectra":
-                        sd = self.init_data.iloc[:, 2:].subtract(self.init_data["Dark spectra"], axis="index")
-                        self.init_data = sd
-                    else:
-                        pass
-
-            except:
-                self.popup_read_file()
             self.statusBar().showMessage("")
 
     def set_default_fitting_range(self):
@@ -1630,10 +1736,10 @@ class MainWindow(QtWidgets.QMainWindow):
         if not self.init_data.empty:
             # set variables
             hc = (4.135667696E-15) * (2.999792E8) * 1E9
-            eV_conv = hc / self.mod_data.index
+            eV_conv = hc / self.yarray
 
             # Make conversion of database and index
-            ev_df = self.mod_data.multiply(self.mod_data.index.values ** 2, axis="index") / hc
+            ev_df = self.mod_data.multiply(self.yarray.values ** 2, axis="index") / hc
 
             ev_df = ev_df.set_index(eV_conv)
             ev_df.index.names = ["Energy"]
@@ -1708,11 +1814,9 @@ class MainWindow(QtWidgets.QMainWindow):
         col_mean = self.init_data.iloc[:, left_b:right_b].mean(axis=1)
         # Subtract mean to all dataset
         clean_data = self.init_data.subtract(col_mean, "index")
-
         # Rename mdata (this is what is always plotted)
         self.mod_data = clean_data.copy()
         self.is_subtract = True
-
         # Update plot
         self.extract_data_for_axis()
         self.plot_setup()
@@ -1723,7 +1827,6 @@ class MainWindow(QtWidgets.QMainWindow):
             # Rename mdata (this is what is always plotted)
             self.init_data = self.mod_data.copy()
             self.create_mod_data()
-
             # Update plot
             self.extract_data_for_axis()
             self.plot_setup()
@@ -1735,10 +1838,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def subtract_background_cancel(self):
         self.is_subtract = False
-        # Rename mdata (this is what is always plotted)
-        #self.init_data = clean_data
         self.create_mod_data()
-
         # Update plot
         self.extract_data_for_axis()
         self.plot_setup()
@@ -1755,6 +1855,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def plot_setup(self):
         self.setWindowTitle("Spectra Analyzer (" + self.sample_name + ")")
+        self.mod_data = self.matrixdat # Stupidly necessary because otherwise mod_data does not update
 
         try:
             self.canvas.axes.cla()
@@ -1765,8 +1866,8 @@ class MainWindow(QtWidgets.QMainWindow):
             pass
 
         # First plot
-        self._plot_ref, = self.canvas.axes.plot(self.yarray, self.mod_data.iloc[:, [0]], 'r', label="Experiment")
-        index_name = self.mod_data.index.name
+        self._plot_ref, = self.canvas.axes.plot(self.yarray, self.yfirst, 'r', label="Experiment")
+        index_name = self.yarray.name
 
         if "0.000" in index_name:
             axis_name = "Wavelength (nm)"
@@ -1807,6 +1908,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ax2 = self.savnac.axes.twinx()
 
         self._plot_heat = self.savnac.axes.pcolorfast(self.mod_data)  # 2D heatplot
+        # self._plot_heat = self.savnac.axes.pcolorfast(self.matrixdat)
         self._plot_vline, = self.savnac.axes.plot([0, 0], [0, self.ysize], 'r')  # Vertical line (Time select)
         self._plot_hline1, = self.savnac.axes.plot([0, self.xsize], [0, 0], 'b')  # Horizontal line1 (Up boundary)
         self._plot_hline2, = self.savnac.axes.plot([0, self.xsize], [0, 0], 'b')  # Horizontal line2 (Down boundary)
@@ -2112,7 +2214,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.bar_update_plots(bar)
 
     def bar_update_plots(self, bar):
-        self._plot_ref.set_xdata(self.mod_data.index.values)
+        self._plot_ref.set_xdata(self.yarray.values)
         self._plot_ref.set_ydata(self.mod_data.iloc[:, [bar]].T.values[0])
 
         try:
