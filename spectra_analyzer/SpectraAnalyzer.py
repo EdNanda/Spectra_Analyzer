@@ -1,5 +1,5 @@
-__author__ = "Edgar Nandayapa"
-__version__ = "1.15 (2022)"
+__author__ = "Edgar R. Nandayapa"
+__version__ = "1.2 (2023)"
 
 import sys
 import os
@@ -130,13 +130,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.infoMenu = QAction("&About", self)
 
         file_PL_options = [
-            {"name": "Open file (Matrix)", "shortcut": "Ctrl+O", "callback": self.menu_load_single_matrix},
-            {"name": "Open folder (Multiple &files)", "shortcut": "Ctrl+U", "callback": self.menu_load_PL_folder},
+            {"name": "Open single file (One &matrix)", "shortcut": "Ctrl+O", "callback": self.menu_load_single_matrix},
+            {"name": "Open separated files (Multiple &arrays)", "shortcut": "Ctrl+U", "callback": self.menu_load_PL_folder},
         ]
         file_XRD_options = [
-            {"name": "Open single file (&Manual)", "shortcut": "Ctrl+M", "callback": self.menu_load_single_manual},
-            {"name": "Open folder w/ &Log files", "shortcut": "Ctrl+P", "callback": self.menu_load_giwaxs_w_log},
-            {"name": "Open folder (Multiple f&iles)", "shortcut": "", "callback": self.menu_load_xrd_separated},
+            #{"name": "Open single file (&Manual)", "shortcut": "Ctrl+M", "callback": self.menu_load_single_manual},
+            {"name": "&GIWAXS: folder w/ Log files", "shortcut": "Ctrl+G", "callback": self.menu_load_giwaxs_w_log},
+            #{"name": "Open folder (Multiple f&iles)", "shortcut": "", "callback": self.menu_load_xrd_separated},
 
         ]
         fileMenu = mainMenu.addMenu("&File")
@@ -146,7 +146,7 @@ class MainWindow(QtWidgets.QMainWindow):
         fileMenu.addSeparator()
         # b = fileMenu.addAction("GIWAXS")
         # b.setDisabled(True)
-        special = fileMenu.addMenu("Special")
+        special = fileMenu.addMenu("&Special")
         self.GUI_menu_builder(file_XRD_options, special)
 
         fit_set_options = [
@@ -167,16 +167,16 @@ class MainWindow(QtWidgets.QMainWindow):
             {"name": "Convert to &Energy (eV)", "shortcut": "", "callback": self.convert_to_eV},
         ]
         functions_2 = [
+            {"name": "Rename plots axis", "shortcut": "", "callback": self.rename_plot_axis},
+            {"name": "Set heatplot &color range", "shortcut": "", "callback": self.popup_heatplot_color_range},
             {"name": "Clean &dead Pixel (831nm)", "shortcut": "", "callback": self.clean_dead_pixel},
             {"name": "Subtract &background", "shortcut": "", "callback": self.popup_subtract_bkgd},
-            {"name": "Set heatplot &color range", "shortcut": "", "callback": self.popup_heatplot_color_range},
         ]
         functions_3 = [
             {"name": "Save &fitting curves only", "shortcut": "", "callback": self.save_snapshot_data},
             {"name": "Save &current matrix dataset", "shortcut": "", "callback": self.save_current_matrix_state},
             {"name": "Save &initial matrix dataset", "shortcut": "", "callback": self.save_data_2DMatrix},
             {"name": "Save &heatplot as png", "shortcut": "", "callback": self.save_heatplot_giwaxs},
-            {"name": "Rename plots axis", "shortcut": "", "callback": self.rename_plot_axis},
         ]
         otherMenu = mainMenu.addMenu("&Other")
         self.GUI_menu_builder(functions_1, otherMenu)
