@@ -165,25 +165,30 @@ class MainWindow(QtWidgets.QMainWindow):
 
         functions_1 = [
             {"name": "Convert to &Energy (eV)", "shortcut": "", "callback": self.convert_to_eV},
+            {"name": "Subtract &background", "shortcut": "", "callback": self.popup_subtract_bkgd},
         ]
         functions_2 = [
             {"name": "Rename plots axis", "shortcut": "", "callback": self.rename_plot_axis},
             {"name": "Set heatplot &color range", "shortcut": "", "callback": self.popup_heatplot_color_range},
-            {"name": "Clean &dead Pixel (831nm)", "shortcut": "", "callback": self.clean_dead_pixel},
-            {"name": "Subtract &background", "shortcut": "", "callback": self.popup_subtract_bkgd},
         ]
         functions_3 = [
-            {"name": "Save &fitting curves only", "shortcut": "", "callback": self.save_snapshot_data},
+
+            {"name": "Clean &dead Pixel (831nm)", "shortcut": "", "callback": self.clean_dead_pixel},
+        ]
+        functions_4 = [
+            {"name": "Save &fitting curves only (snapshot)", "shortcut": "", "callback": self.save_snapshot_data},
             {"name": "Save &current matrix dataset", "shortcut": "", "callback": self.save_current_matrix_state},
             {"name": "Save &initial matrix dataset", "shortcut": "", "callback": self.save_data_2DMatrix},
             {"name": "Save &heatplot as png", "shortcut": "", "callback": self.save_heatplot_giwaxs},
         ]
-        otherMenu = mainMenu.addMenu("&Other")
-        self.GUI_menu_builder(functions_1, otherMenu)
-        otherMenu.addSeparator()
-        self.GUI_menu_builder(functions_2, otherMenu)
-        otherMenu.addSeparator()
-        self.GUI_menu_builder(functions_3, otherMenu)
+        modify_menu = mainMenu.addMenu("&Modify")
+        self.GUI_menu_builder(functions_1, modify_menu)
+        modify_menu.addSeparator()
+        self.GUI_menu_builder(functions_2, modify_menu)
+        modify_menu.addSeparator()
+        self.GUI_menu_builder(functions_3, modify_menu)
+        export_menu = mainMenu.addMenu("&Export")
+        self.GUI_menu_builder(functions_4, export_menu)
 
         mainMenu.addAction(self.infoMenu)
 
@@ -412,6 +417,12 @@ class MainWindow(QtWidgets.QMainWindow):
             self.statusBar().showMessage("Data file has not been selected yet!", 5000)
 
     def save_snapshot_data(self):
+        folder = self.file_path.rsplit("/", 1)[0]
+        snap_folder = folder + "/Snapshots"
+        print(snap_folder)
+        if not os.path.exists(snap_folder):
+            os.makedirs(snap_folder)
+
         if not self.init_data.empty:
             self.fitmodel_process()
             bar = int(self.ScrollbarTime.value())  # Read scrollbar value
@@ -430,8 +441,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 snapshot[mc.prefix[:-1]] = comps[mc.prefix]
             snapshot.set_index('x_data', inplace=True)
 
-            folder = self.file_path.rsplit("/", 1)[0]
-            snapshot.to_excel(folder + "/snapshot_" + str(bar) + ".xlsx")
+            snapshot.to_excel(snap_folder + "/snapshot_" + str(bar) + ".xlsx")
             self.statusBar().showMessage("Snapshot saved", 5000)
         else:
             self.statusBar().showMessage("Data file has not been selected yet!", 5000)
