@@ -185,6 +185,12 @@ class MainWindow(QtWidgets.QMainWindow):
         otherMenu.addSeparator()
         self.GUI_menu_builder(functions_3, otherMenu)
 
+        special_functions = [
+            {"name": "Animation maker", "shortcut": "", "callback": self.popup_animation},
+        ]
+        specialMenu = mainMenu.addMenu("&Special")
+        self.GUI_menu_builder(special_functions, specialMenu)
+
         mainMenu.addAction(self.infoMenu)
 
     def GUI_widgets(self):
@@ -1758,6 +1764,148 @@ class MainWindow(QtWidgets.QMainWindow):
             # self.scrollbar_action()
         else:
             self.statusBar().showMessage("Data file has not been selected yet!", 5000)
+
+    def popup_animation(self):
+        self.dani = QDialog()
+        self.dani.setWindowTitle("Animation maker")
+        Lopt = QVBoxLayout()
+        Lopt.setAlignment(Qt.AlignCenter)
+
+        button_width = 40
+        folder_width = 300
+        entry_width = 50
+
+        layout = QGridLayout()
+
+        label_matrix = QLabel("Raw data file(matrix)")
+        label_fit = QLabel("Fit data file")
+        label_xaxis = QLabel("x-axis name")
+        label_yaxis = QLabel("y-axis name")
+        self.field_matrix = QLineEdit()
+        self.field_fit = QLineEdit()
+        field_xaxis = QLineEdit("Wavelength (nm)")
+        field_yaxis = QLineEdit("Intensity (a.u.)")
+        self.field_matrix.setFixedWidth(folder_width)
+        self.field_fit.setFixedWidth(folder_width)
+        field_xaxis.setFixedWidth(entry_width*3)
+        field_yaxis.setFixedWidth(entry_width*3)
+        button_matrix = QPushButton("Open")
+        button_fit = QPushButton("Open")
+        button_matrix.setFixedWidth(button_width)
+        button_fit.setFixedWidth(button_width)
+        empty = QLabel(" ")
+
+        layout.addWidget(label_matrix, 0, 0)
+        layout.addWidget(self.field_matrix, 0, 1)
+        layout.addWidget(button_matrix, 0, 2)
+        layout.addWidget(label_fit, 1, 0)
+        layout.addWidget(self.field_fit, 1, 1)
+        layout.addWidget(button_fit, 1, 2)
+        layout.addWidget(label_xaxis, 2, 0)
+        layout.addWidget(field_xaxis, 2, 1)
+        layout.addWidget(label_yaxis, 3, 0)
+        layout.addWidget(field_yaxis, 3, 1)
+        layout.addWidget(empty, 4, 0)
+
+        label_found = QLabel("Curves found")
+        self.grid_curves = QGridLayout()
+        label_setup = QLabel("Animation setup")
+        label_start = QLabel("Starting frame")
+        label_end = QLabel("Ending frame")
+        label_fps = QLabel("Speed (fps)")
+        label_save = QLabel("Save as")
+        label_found.setAlignment(Qt.AlignCenter)
+        label_setup.setAlignment(Qt.AlignCenter)
+        field_start = QLineEdit("0")
+        self.field_end = QLineEdit()
+        field_fps = QLineEdit("3")
+        self.field_save = QLineEdit()
+        field_start.setFixedWidth(entry_width)
+        self.field_end.setFixedWidth(entry_width)
+        field_fps.setFixedWidth(entry_width)
+        self.field_save.setFixedWidth(folder_width)
+        button_save = QPushButton("Open")
+        button_save.setFixedWidth(button_width)
+
+        layout.addWidget(label_found, 5, 0, 1, 1)
+        layout.addLayout(self.grid_curves, 6, 1, 1, 1)
+        layout.addWidget(empty, 7, 0)
+        layout.addWidget(label_setup, 8, 0, 1, 1)
+        layout.addWidget(label_start, 9, 0)
+        layout.addWidget(field_start, 9, 1)
+        layout.addWidget(label_end, 10, 0)
+        layout.addWidget(self.field_end, 10, 1)
+        layout.addWidget(label_fps, 11, 0)
+        layout.addWidget(field_fps, 11, 1)
+        layout.addWidget(label_save, 12, 0)
+        layout.addWidget(self.field_save, 12, 1)
+        layout.addWidget(button_save, 12, 2)
+
+        Lopt.addLayout(layout)
+
+        button_matrix.clicked.connect(self.popup_ani_raw)
+        # Bsubtract.clicked.connect(self.subtract_background_function)
+        # Bapply.clicked.connect(self.subtract_background_accept)
+        # Bcancel.rejected.connect(self.subtract_background_cancel)
+
+        self.dani.setLayout(Lopt)
+        self.dani.setWindowModality(Qt.ApplicationModal)
+        self.dani.exec_()
+
+    def popup_ani_raw(self):
+        filepath = QtWidgets.QFileDialog.getOpenFileName(self, "Select a file", "")
+        filepath = filepath[0]
+        if filepath != "":  # if cancelled, do nothing
+            self.field_matrix.setText(filepath)
+            savepath = filepath.rsplit("/",1)[0]
+            self.field_save.setText(savepath + "/animation.gif")
+            fit_file = glob(savepath+"/Fitting*/*fitting_parameters.xlsx")
+            if len(fit_file) != 0:
+                self.field_fit.setText(fit_file[0])
+                self.popup_ani_fit(True)
+            else:
+                pass
+
+    def popup_ani_fit(self, ongoing=False):
+        is_file = False
+        if not ongoing:
+            filepath = QtWidgets.QFileDialog.getOpenFileName(self, "Select a file", "")
+            filepath = filepath[0]
+            if filepath != "":  # if cancelled, do nothing
+                self.fit_matrix.setText(filepath)
+                is_file = True
+        else:
+            filepath = self.field_fit.text()
+            is_file = True
+
+        if is_file:
+            fit_data = pd.read_excel(filepath, index_col=0, header=0)
+            models = []
+            for ke in fit_data.keys():
+                models.append(ke.rsplit("_", 1)[0])
+            models = np.unique(models)[:-1]
+            unique_mods = len(models)
+            data_rows = fit_data.shape[0]
+            self.field_end.setText(str(data_rows))
+
+            self.grid_curves.addWidget(QLabel("Plot"), 0, 0)
+            self.grid_curves.addWidget(QLabel("Type"), 0, 1)
+            self.grid_curves.addWidget(QLabel("Name"), 0, 2)
+            checkbx = []
+            for co, mo in enumerate(models):
+                print(co)
+                box = QCheckBox()
+                box.setChecked(True)
+                lab = QLabel(mo)
+                entry = QLineEdit("")
+                entry.setFixedWidth(150)
+
+                checkbx.append(box)
+                self.grid_curves.addWidget(box, co+1, 0)
+                self.grid_curves.addWidget(lab, co+1, 1)
+                self.grid_curves.addWidget(entry, co+1, 2)
+
+
 
     def popup_subtract_bkgd(self):
         if not self.init_data.empty:
