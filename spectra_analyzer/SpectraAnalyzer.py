@@ -221,10 +221,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.Bfit.setToolTip("Fit single curve")
         self.LR = QLabel()
         self.Lvalue = QLabel()
-        self.L1 = QLabel("Start:")
+        self.L1 = QLabel("Start\nframe:")
         self.L1.setAlignment(Qt.AlignRight)
         self.L1.setFixedWidth(60)
-        self.L2 = QLabel("End:")
+        self.L2 = QLabel("End\nframe:")
         self.L2.setFixedWidth(60)
         self.L2.setAlignment(Qt.AlignRight)
         self.LEstart = QLineEdit() #TODO add blocks here and LEend so that people cannot go outside range
@@ -2202,7 +2202,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.text_time = self.canvas.axes.text(0.4, 0.9, self.t_label + " 0.0",
                                                horizontalalignment='left', verticalalignment='center',
                                                transform=self.canvas.axes.transAxes)
-        self.text_pos = self.canvas.axes.text(0.4, 0.83, "Position 0",
+        self.text_pos = self.canvas.axes.text(0.4, 0.83, "Frame 0",
                                               horizontalalignment='left', verticalalignment='center',
                                               transform=self.canvas.axes.transAxes)
 
@@ -2528,7 +2528,7 @@ class MainWindow(QtWidgets.QMainWindow):
         except:
             time = str(self.xarray[bar])
         self.text_time.set_text(self.t_label + " " + time)
-        self.text_pos.set_text("Position " + str(bar))
+        self.text_pos.set_text("Frame " + str(bar))
 
         self._plot_vline.set_xdata([bar, bar])
         self.canvas.draw_idle()
