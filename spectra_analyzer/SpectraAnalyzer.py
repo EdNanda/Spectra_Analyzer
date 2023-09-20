@@ -226,7 +226,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.L2 = QLabel("End\nframe:")
         self.L2.setFixedWidth(60)
         self.L2.setAlignment(Qt.AlignRight)
-        self.LEstart = QLineEdit()
+        self.LEstart = QLineEdit() #TODO add blocks here and LEend so that people cannot go outside range
         self.LEend = QLineEdit()
         self.LEstart.setFixedWidth(60)
         self.LEend.setFixedWidth(60)
@@ -770,7 +770,9 @@ class MainWindow(QtWidgets.QMainWindow):
         Lopt = QVBoxLayout()
         Lopt.setAlignment(Qt.AlignCenter)
 
-        Tdats = QLabel(f"A total of {datasets} data files were found")
+        Tdats = QLabel(f"A total of {datasets} data files were found.\n\n"
+                       f"Open the file and identify the first line where data appears.\n"
+                       f"Write that number below ")
         Lopt.addWidget(Tdats)
 
         layout = QFormLayout()
@@ -781,7 +783,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.fdpline.setToolTip("In a program like Notepad++, find the line where the\n"
                           "first data pair appears, excluding the header or metadata,\n"
                           "and write that line number here")
-        layout.addRow("First data-pair line", self.fdpline)
+        layout.addRow("Line of first data-pair", self.fdpline)
         Lopt.addLayout(layout)
 
         Bok = QDialogButtonBox(QDialogButtonBox.Ok)
@@ -1877,9 +1879,8 @@ class MainWindow(QtWidgets.QMainWindow):
         Lopt.addLayout(layout)
 
         button_matrix.clicked.connect(self.popup_ani_raw)
-        # Bsubtract.clicked.connect(self.subtract_background_function)
-        # Bapply.clicked.connect(self.subtract_background_accept)
-        # Bcancel.rejected.connect(self.subtract_background_cancel)
+        button_fit.clicked.connect(self.popup_ani_fit)
+        button_save.clicked.connect(self.popup_ani_save)
 
         self.dani.setLayout(Lopt)
         self.dani.setWindowModality(Qt.ApplicationModal)
@@ -1901,8 +1902,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def popup_ani_fit(self, ongoing=False):
         is_file = False
+        folder = self.field_matrix.text().rsplit("/",1)[0]
+        if folder != "":
+            init_path = folder
+        else:
+            init_path = ""
         if not ongoing:
-            filepath = QtWidgets.QFileDialog.getOpenFileName(self, "Select a file", "")
+            filepath = QtWidgets.QFileDialog.getOpenFileName(self, "Select a file", init_path)
             filepath = filepath[0]
             if filepath != "":  # if cancelled, do nothing
                 self.fit_matrix.setText(filepath)
@@ -1911,32 +1917,61 @@ class MainWindow(QtWidgets.QMainWindow):
             filepath = self.field_fit.text()
             is_file = True
 
-        if is_file:
+        if is_file:# TODO left off here, fixing extraction of the curve given name
+            params = ["center", "amplitude", "sigma", "fwhm", "height", "decay", "slope", "intercept",
+                      "c1", "c2", "c3", "c4", "c5", "c6", "c7"]
             fit_data = pd.read_excel(filepath, index_col=0, header=0)
-            models = []
+            loc_models = []
+            names = []
             for ke in fit_data.keys():
-                models.append(ke.rsplit("_", 1)[0])
-            models = np.unique(models)[:-1]
-            unique_mods = len(models)
+                if ke.split("_")[0] in self.models:
+                    loc_models.append(ke.rsplit("_",1)[0])
+                else:
+                    loc_models.append("")
+
+                name_parts = ke.split("_")
+                if len(name_parts) == 2:
+                    names.append(name_parts[0])
+                else:
+                    if name_parts[-2].isdigit():
+                        names.append(ke.rsplit("_",1)[0])
+                    else:
+                        names.append(name_parts[-2])
+
+            loc_models = np.unique(loc_models)[:-1]
+            unique_mods = len(loc_models)
             data_rows = fit_data.shape[0]
             self.field_end.setText(str(data_rows))
 
             self.grid_curves.addWidget(QLabel("Plot"), 0, 0)
             self.grid_curves.addWidget(QLabel("Type"), 0, 1)
             self.grid_curves.addWidget(QLabel("Name"), 0, 2)
-            checkbx = []
-            for co, mo in enumerate(models):
+            self.ani_checkbox = []
+            self.ani_names = []
+            for co, mo in enumerate(loc_models):
                 print(co)
                 box = QCheckBox()
                 box.setChecked(True)
                 lab = QLabel(mo)
-                entry = QLineEdit("")
+                entry = QLineEdit(names[co])
                 entry.setFixedWidth(150)
 
-                checkbx.append(box)
+                self.ani_checkbox.append(box)
+                self.ani_names.append(entry)
                 self.grid_curves.addWidget(box, co+1, 0)
                 self.grid_curves.addWidget(lab, co+1, 1)
                 self.grid_curves.addWidget(entry, co+1, 2)
+
+    def popup_ani_save(self):
+        folder = self.field_matrix.text().rsplit("/", 1)[0]
+        if folder != "":
+            init_path = folder
+        else:
+            init_path = ""
+        filepath = QtWidgets.QFileDialog.getOpenFileName(self, "Save as:", init_path)
+        filepath = filepath[0]
+        if filepath != "":  # if cancelled, do nothing
+            self.fit_matrix.setText(filepath)
 
 
 
