@@ -32,6 +32,7 @@ from datetime import datetime
 from glob import glob
 from functools import partial
 from matplotlib import rcParams
+from resources.animation_maker import VideoMaker
 
 rcParams.update({'figure.autolayout': True})
 cmaps = OrderedDict()
@@ -1785,12 +1786,12 @@ class MainWindow(QtWidgets.QMainWindow):
         label_yaxis = QLabel("y-axis name")
         self.field_matrix = QLineEdit()
         self.field_fit = QLineEdit()
-        field_xaxis = QLineEdit("Wavelength (nm)")
-        field_yaxis = QLineEdit("Intensity (a.u.)")
+        self.field_xaxis = QLineEdit("Wavelength (nm)")
+        self.field_yaxis = QLineEdit("Intensity (a.u.)")
         self.field_matrix.setFixedWidth(folder_width)
         self.field_fit.setFixedWidth(folder_width)
-        field_xaxis.setFixedWidth(entry_width*3)
-        field_yaxis.setFixedWidth(entry_width*3)
+        self.field_xaxis.setFixedWidth(entry_width*3)
+        self.field_yaxis.setFixedWidth(entry_width*3)
         button_matrix = QPushButton("Open")
         button_fit = QPushButton("Open")
         button_matrix.setFixedWidth(button_width)
@@ -1804,12 +1805,13 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addWidget(self.field_fit, 1, 1)
         layout.addWidget(button_fit, 1, 2)
         layout.addWidget(label_xaxis, 2, 0)
-        layout.addWidget(field_xaxis, 2, 1)
+        layout.addWidget(self.field_xaxis, 2, 1)
         layout.addWidget(label_yaxis, 3, 0)
-        layout.addWidget(field_yaxis, 3, 1)
+        layout.addWidget(self.field_yaxis, 3, 1)
         layout.addWidget(empty, 4, 0)
 
         label_found = QLabel("Curves found")
+        self.basic_curves = QGridLayout()
         self.grid_curves = QGridLayout()
         label_setup = QLabel("Animation setup")
         label_start = QLabel("Starting frame")
@@ -1830,27 +1832,47 @@ class MainWindow(QtWidgets.QMainWindow):
         button_save.setFixedWidth(button_width)
 
         layout.addWidget(label_found, 5, 0, 1, 1)
-        layout.addLayout(self.grid_curves, 6, 1, 1, 1)
-        layout.addWidget(empty, 7, 0)
-        layout.addWidget(label_setup, 8, 0, 1, 1)
-        layout.addWidget(label_start, 9, 0)
-        layout.addWidget(self.field_start, 9, 1)
-        layout.addWidget(label_end, 10, 0)
-        layout.addWidget(self.field_end, 10, 1)
-        layout.addWidget(label_fps, 11, 0)
-        layout.addWidget(self.field_fps, 11, 1)
-        layout.addWidget(label_save, 12, 0)
-        layout.addWidget(self.field_save, 12, 1)
-        layout.addWidget(button_save, 12, 2)
+        layout.addLayout(self.basic_curves, 6, 1, 1, 1)
+        layout.addLayout(self.grid_curves, 7, 1, 1, 1)
+        layout.addWidget(empty, 8, 0)
+        layout.addWidget(label_setup, 9, 0, 1, 1)
+        layout.addWidget(label_start, 10, 0)
+        layout.addWidget(self.field_start,10, 1)
+        layout.addWidget(label_end, 11, 0)
+        layout.addWidget(self.field_end, 11, 1)
+        layout.addWidget(label_fps, 12, 0)
+        layout.addWidget(self.field_fps, 12, 1)
+        layout.addWidget(label_save, 13, 0)
+        layout.addWidget(self.field_save, 13, 1)
+        layout.addWidget(button_save, 13, 2)
+
+        self.box_raw = QCheckBox()
+        self.box_bestfit = QCheckBox()
+        self.box_raw.setChecked(True)
+        self.box_bestfit.setChecked(True)
+        lab_raw = QLabel("Raw data")
+        lab_bestfit = QLabel("Best fit data")
+        self.entry_raw = QLineEdit("Raw")
+        self.entry_bestfit = QLineEdit("Best fit")
+
+        self.basic_curves.addWidget(QLabel("Plot"), 0, 0)
+        self.basic_curves.addWidget(QLabel("Type"), 0, 1)
+        self.basic_curves.addWidget(QLabel("Name"), 0, 2)
+        self.basic_curves.addWidget(self.box_raw, 1, 0)
+        self.basic_curves.addWidget(lab_raw, 1, 1)
+        self.basic_curves.addWidget(self.entry_raw, 1, 2)
+        self.basic_curves.addWidget(self.box_bestfit, 2, 0)
+        self.basic_curves.addWidget(lab_bestfit, 2, 1)
+        self.basic_curves.addWidget(self.entry_bestfit, 1, 2)
 
         start_ani = QPushButton("Create")
         close_ani = QPushButton("Cancel")
         start_ani.setFixedWidth(button_width*2)
         close_ani.setFixedWidth(button_width*2)
 
-        layout.addWidget(empty, 13, 0)
-        layout.addWidget(start_ani, 14, 1, alignment=Qt.AlignmentFlag.AlignRight)
-        layout.addWidget(close_ani, 14, 2, alignment=Qt.AlignmentFlag.AlignLeft)
+        layout.addWidget(empty, 14, 0)
+        layout.addWidget(start_ani, 15, 1, alignment=Qt.AlignmentFlag.AlignRight)
+        layout.addWidget(close_ani, 15, 2, alignment=Qt.AlignmentFlag.AlignLeft)
 
         Lopt.addLayout(layout)
 
@@ -1874,17 +1896,29 @@ class MainWindow(QtWidgets.QMainWindow):
                 model_list.append(self.ani_dropdown[cc].currentText())
                 names_list.append(self.ani_names[cc].text())
 
+        bool_basic = [self.box_raw.isChecked(), self.box_bestfit.isChecked()]
+        names_basic = [self.entry_raw.text(), self.entry_bestfit.text()]
+
         raw_file = self.field_matrix.text()
         fit_file = self.field_fit.text()
         save_file = self.field_save.text()
+        name_xaxis = self.field_xaxis.text()
+        name_yaxis = self.field_yaxis.text()
 
         srt_frame = int(self.field_start.text())
         end_frame = int(self.field_end.text())
         if self.ani_fit_data is not None:
-            if end_frame > self.ani_fit_data.shape[0]:
-                end_frame = self.ani_fit_data.shape[0]
+            if end_frame > self.ani_fit_data.index[-1]:
+                end_frame = self.ani_fit_data.index[-1]
                 self.field_end.setText(str(end_frame))
-            if srt_frame > self.ani_fit_data.shape[0] or srt_frame > end_frame:
+            elif end_frame < self.ani_fit_data.index[0] or end_frame < srt_frame:
+                end_frame = max(self.ani_fit_data.shape[0], end_frame) + 10
+                self.field_end.setText(str(end_frame))
+
+            if srt_frame < self.ani_fit_data.index[-1]:
+                srt_frame = self.ani_fit_data.index[-1]
+                self.field_start.setText(str(srt_frame))
+            elif srt_frame > self.ani_fit_data.shape[0] or srt_frame > end_frame:
                 srt_frame = min(self.ani_fit_data.shape[0], end_frame) - 10
                 self.field_start.setText(str(srt_frame))
         else:
@@ -1892,11 +1926,14 @@ class MainWindow(QtWidgets.QMainWindow):
         fps = int(self.field_fps.text())
         if fps < 1:
             fps = 1
-            self.field_fps.seTtext(int(fps))
+            self.field_fps.setText(str(fps))
 
-        print(raw_file, fit_file, save_file)
-        print(bool_list, model_list, names_list)
-        print(srt_frame, end_frame, fps)
+        paths = [raw_file, fit_file, save_file]
+        lists = [bool_basic, names_basic, bool_list, model_list, names_list]
+        values = [name_xaxis, name_yaxis, srt_frame, end_frame, fps]
+
+
+        VideoMaker(paths, lists, values)
 
     def popup_ani_close(self):
         self.dani.close()
@@ -1968,23 +2005,21 @@ class MainWindow(QtWidgets.QMainWindow):
                     given_names.append(ke.rsplit("_", 1)[0])
                 else:
                     pass
-            print(given_names)
+            # print(given_names)
 
             spaces = max(len(given_names), peak_counter)
-            print(peak_counter, spaces)
+            # print(peak_counter, spaces)
 
-            data_rows = self.ani_fit_data.shape[0]
-            self.field_end.setText(str(data_rows))
+            # data_rows = self.ani_fit_data.shape[0]
+            self.field_start.setText(str(self.ani_fit_data.index[0]))
+            self.field_end.setText(str(self.ani_fit_data.index[-1]))
 
-            self.grid_curves.addWidget(QLabel("Plot"), 0, 0)
-            self.grid_curves.addWidget(QLabel("Type"), 0, 1)
-            self.grid_curves.addWidget(QLabel("Name"), 0, 2)
             self.ani_checkbox = []
             self.ani_names = []
             self.ani_dropdown = []
 
             # Populate grid with checkboxes, combo boxes and names
-            for co in range(spaces):
+            for co in range(spaces):  # todo add raw and bestfit curves
                 box = QCheckBox()
                 box.setChecked(True)
                 drop = QComboBox()
