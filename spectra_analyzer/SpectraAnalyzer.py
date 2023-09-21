@@ -1804,7 +1804,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.dani = QDialog()
         self.dani.setWindowTitle("Animation maker")
         Lopt = QVBoxLayout()
-        Lopt.setAlignment(Qt.AlignCenter)
+        Lopt.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         button_width = 40
         folder_width = 300
@@ -1849,15 +1849,15 @@ class MainWindow(QtWidgets.QMainWindow):
         label_end = QLabel("Ending frame")
         label_fps = QLabel("Speed (fps)")
         label_save = QLabel("Save as")
-        label_found.setAlignment(Qt.AlignCenter)
-        label_setup.setAlignment(Qt.AlignCenter)
-        field_start = QLineEdit("0")
+        label_found.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        label_setup.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.field_start = QLineEdit("0")
         self.field_end = QLineEdit()
-        field_fps = QLineEdit("3")
+        self.field_fps = QLineEdit("3")
         self.field_save = QLineEdit()
-        field_start.setFixedWidth(entry_width)
+        self.field_start.setFixedWidth(entry_width)
         self.field_end.setFixedWidth(entry_width)
-        field_fps.setFixedWidth(entry_width)
+        self.field_fps.setFixedWidth(entry_width)
         self.field_save.setFixedWidth(folder_width)
         button_save = QPushButton("Open")
         button_save.setFixedWidth(button_width)
@@ -1867,27 +1867,80 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addWidget(empty, 7, 0)
         layout.addWidget(label_setup, 8, 0, 1, 1)
         layout.addWidget(label_start, 9, 0)
-        layout.addWidget(field_start, 9, 1)
+        layout.addWidget(self.field_start, 9, 1)
         layout.addWidget(label_end, 10, 0)
         layout.addWidget(self.field_end, 10, 1)
         layout.addWidget(label_fps, 11, 0)
-        layout.addWidget(field_fps, 11, 1)
+        layout.addWidget(self.field_fps, 11, 1)
         layout.addWidget(label_save, 12, 0)
         layout.addWidget(self.field_save, 12, 1)
         layout.addWidget(button_save, 12, 2)
+
+        start_ani = QPushButton("Create")
+        close_ani = QPushButton("Cancel")
+        start_ani.setFixedWidth(button_width*2)
+        close_ani.setFixedWidth(button_width*2)
+
+        layout.addWidget(empty, 13, 0)
+        layout.addWidget(start_ani, 14, 1, alignment=Qt.AlignmentFlag.AlignRight)
+        layout.addWidget(close_ani, 14, 2, alignment=Qt.AlignmentFlag.AlignLeft)
 
         Lopt.addLayout(layout)
 
         button_matrix.clicked.connect(self.popup_ani_raw)
         button_fit.clicked.connect(self.popup_ani_fit)
         button_save.clicked.connect(self.popup_ani_save)
+        start_ani.clicked.connect(self.popup_ani_start)
+        close_ani.clicked.connect(self.popup_ani_close)
 
         self.dani.setLayout(Lopt)
         self.dani.setWindowModality(Qt.ApplicationModal)
         self.dani.exec_()
 
+    def popup_ani_start(self):
+        model_list = []
+        names_list = []
+        bool_list = []
+        for cc, chbx in enumerate(self.ani_checkbox):
+            bool_list.append(chbx.isChecked())
+            if chbx.isChecked():
+                model_list.append(self.ani_dropdown[cc].currentText())
+                names_list.append(self.ani_names[cc].text())
+
+        raw_file = self.field_matrix.text()
+        fit_file = self.field_fit.text()
+        save_file = self.field_save.text()
+
+        srt_frame = int(self.field_start.text())
+        end_frame = int(self.field_end.text())
+        if self.ani_fit_data is not None:
+            if end_frame > self.ani_fit_data.shape[0]:
+                end_frame = self.ani_fit_data.shape[0]
+                self.field_end.setText(str(end_frame))
+            if srt_frame > self.ani_fit_data.shape[0] or srt_frame > end_frame:
+                srt_frame = min(self.ani_fit_data.shape[0], end_frame) - 10
+                self.field_start.setText(str(srt_frame))
+        else:
+            print("error")
+        fps = int(self.field_fps.text())
+        if fps < 1:
+            fps = 1
+            self.field_fps.seTtext(int(fps))
+
+        print(raw_file, fit_file, save_file)
+        print(bool_list, model_list, names_list)
+        print(srt_frame, end_frame, fps)
+
+    def popup_ani_close(self):
+        self.dani.close()
+
     def popup_ani_raw(self):
-        filepath = QtWidgets.QFileDialog.getOpenFileName(self, "Select a file", "")
+        if self.field_matrix.text() != "":  # Check if anything on matrix field
+            directory = self.field_matrix.text() + "/"
+        else:
+            directory = ""
+
+        filepath = QtWidgets.QFileDialog.getOpenFileName(self, "Select a file", directory)
         filepath = filepath[0]
         if filepath != "":  # if cancelled, do nothing
             self.field_matrix.setText(filepath)
@@ -1901,6 +1954,11 @@ class MainWindow(QtWidgets.QMainWindow):
                 pass
 
     def popup_ani_fit(self, ongoing=False):
+        # Reset grid layout
+        for i in reversed(range(self.grid_curves.count())):
+            # self.grid_curves.itemAt(i).widget().deleteLater()
+            self.grid_curves.itemAt(i).widget().setParent(None)
+        # Read path
         is_file = False
         folder = self.field_matrix.text().rsplit("/",1)[0]
         if folder != "":
@@ -1911,36 +1969,44 @@ class MainWindow(QtWidgets.QMainWindow):
             filepath = QtWidgets.QFileDialog.getOpenFileName(self, "Select a file", init_path)
             filepath = filepath[0]
             if filepath != "":  # if cancelled, do nothing
-                self.fit_matrix.setText(filepath)
+                self.field_fit.setText(filepath)
                 is_file = True
         else:
             filepath = self.field_fit.text()
             is_file = True
 
-        if is_file:# TODO left off here, fixing extraction of the curve given name
+        if is_file:
+            # Separate model and given names from ani_fit_data.keys() to populate GUI
             params = ["center", "amplitude", "sigma", "fwhm", "height", "decay", "slope", "intercept",
-                      "c1", "c2", "c3", "c4", "c5", "c6", "c7"]
-            fit_data = pd.read_excel(filepath, index_col=0, header=0)
+                      "gamma", "c1", "c2", "c3", "c4", "c5", "c6", "c7"]
+            self.ani_fit_data = pd.read_excel(filepath, index_col=0, header=0)
             loc_models = []
-            names = []
-            for ke in fit_data.keys():
-                if ke.split("_")[0] in self.models:
-                    loc_models.append(ke.rsplit("_",1)[0])
+            given_names = []
+            peak_counter = 0
+            for ke in self.ani_fit_data.keys():
+                if "center" in ke:
+                    peak_counter += 1
                 else:
-                    loc_models.append("")
+                    pass
 
-                name_parts = ke.split("_")
-                if len(name_parts) == 2:
-                    names.append(name_parts[0])
+                if ke == "r-squared":
+                    pass
+                elif ke.split("_")[0] in self.models and ke.split("_")[2] not in params \
+                        and ke.split("_")[2] not in given_names:
+                    loc_models.append(ke.split("_")[0])
+                    given_names.append(ke.split("_")[2])
+                elif ke.split("_")[0] in self.models and ke.split("_")[2] in params \
+                     and ke.rsplit("_", 1)[0] not in given_names:
+                    loc_models.append(ke.split("_")[0])
+                    given_names.append(ke.rsplit("_", 1)[0])
                 else:
-                    if name_parts[-2].isdigit():
-                        names.append(ke.rsplit("_",1)[0])
-                    else:
-                        names.append(name_parts[-2])
+                    pass
+            print(given_names)
 
-            loc_models = np.unique(loc_models)[:-1]
-            unique_mods = len(loc_models)
-            data_rows = fit_data.shape[0]
+            spaces = max(len(given_names), peak_counter)
+            print(peak_counter, spaces)
+
+            data_rows = self.ani_fit_data.shape[0]
             self.field_end.setText(str(data_rows))
 
             self.grid_curves.addWidget(QLabel("Plot"), 0, 0)
@@ -1948,18 +2014,25 @@ class MainWindow(QtWidgets.QMainWindow):
             self.grid_curves.addWidget(QLabel("Name"), 0, 2)
             self.ani_checkbox = []
             self.ani_names = []
-            for co, mo in enumerate(loc_models):
-                print(co)
+            self.ani_dropdown = []
+
+            # Populate grid with checkboxes, combo boxes and names
+            for co in range(spaces):
                 box = QCheckBox()
                 box.setChecked(True)
-                lab = QLabel(mo)
-                entry = QLineEdit(names[co])
+                drop = QComboBox()
+                drop.addItems(self.models)
+                drop.setCurrentText(loc_models[co])
+                entry = QLineEdit(given_names[co])
                 entry.setFixedWidth(150)
 
+                # Relevant data for the animation
                 self.ani_checkbox.append(box)
                 self.ani_names.append(entry)
+                self.ani_dropdown.append(drop)
+
                 self.grid_curves.addWidget(box, co+1, 0)
-                self.grid_curves.addWidget(lab, co+1, 1)
+                self.grid_curves.addWidget(drop, co+1, 1)
                 self.grid_curves.addWidget(entry, co+1, 2)
 
     def popup_ani_save(self):
