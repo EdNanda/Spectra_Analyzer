@@ -1863,7 +1863,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.basic_curves.addWidget(self.entry_raw, 1, 2)
         self.basic_curves.addWidget(self.box_bestfit, 2, 0)
         self.basic_curves.addWidget(lab_bestfit, 2, 1)
-        self.basic_curves.addWidget(self.entry_bestfit, 1, 2)
+        self.basic_curves.addWidget(self.entry_bestfit, 2, 2)
 
         start_ani = QPushButton("Create")
         close_ani = QPushButton("Cancel")
@@ -1915,8 +1915,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 end_frame = max(self.ani_fit_data.shape[0], end_frame) + 10
                 self.field_end.setText(str(end_frame))
 
-            if srt_frame < self.ani_fit_data.index[-1]:
-                srt_frame = self.ani_fit_data.index[-1]
+            if srt_frame < self.ani_fit_data.index[0]:
+                srt_frame = self.ani_fit_data.index[0]
                 self.field_start.setText(str(srt_frame))
             elif srt_frame > self.ani_fit_data.shape[0] or srt_frame > end_frame:
                 srt_frame = min(self.ani_fit_data.shape[0], end_frame) - 10
@@ -2019,7 +2019,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ani_dropdown = []
 
             # Populate grid with checkboxes, combo boxes and names
-            for co in range(spaces):  # todo add raw and bestfit curves
+            for co in range(spaces):
                 box = QCheckBox()
                 box.setChecked(True)
                 drop = QComboBox()
