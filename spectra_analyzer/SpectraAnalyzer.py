@@ -1769,7 +1769,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.statusBar().showMessage("Data file has not been selected yet!", 5000)
 
     def popup_animation(self):
-        self.dani = QDialog()
+        self.dani = QDialog(self)
         self.dani.setWindowTitle("Animation maker")
         Lopt = QVBoxLayout()
         Lopt.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -1874,6 +1874,10 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addWidget(start_ani, 15, 1, alignment=Qt.AlignmentFlag.AlignRight)
         layout.addWidget(close_ani, 15, 2, alignment=Qt.AlignmentFlag.AlignLeft)
 
+        self.lab_status = QLabel(" ")
+        layout.addWidget(self.lab_status, 16, 0, alignment=Qt.AlignmentFlag.AlignLeft)
+
+
         Lopt.addLayout(layout)
 
         button_matrix.clicked.connect(self.popup_ani_raw)
@@ -1892,9 +1896,9 @@ class MainWindow(QtWidgets.QMainWindow):
         bool_list = []
         for cc, chbx in enumerate(self.ani_checkbox):
             bool_list.append(chbx.isChecked())
-            if chbx.isChecked():
-                model_list.append(self.ani_dropdown[cc].currentText())
-                names_list.append(self.ani_names[cc].text())
+            # if chbx.isChecked():
+            model_list.append(self.ani_dropdown[cc].currentText())
+            names_list.append(self.ani_names[cc].text())
 
         bool_basic = [self.box_raw.isChecked(), self.box_bestfit.isChecked()]
         names_basic = [self.entry_raw.text(), self.entry_bestfit.text()]
@@ -1932,9 +1936,10 @@ class MainWindow(QtWidgets.QMainWindow):
         lists = [bool_basic, names_basic, bool_list, model_list, names_list]
         values = [name_xaxis, name_yaxis, srt_frame, end_frame, fps]
 
+        VideoMaker(paths, lists, values, self)
 
-        VideoMaker(paths, lists, values)
-
+    def popup_ani_update_label(self, text):
+        self.lab_status.setText(text)
     def popup_ani_close(self):
         self.dani.close()
 
