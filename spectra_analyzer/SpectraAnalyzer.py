@@ -1865,7 +1865,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def plot_setup(self):
         self.setWindowTitle("Spectra Analyzer (" + self.sample_name + ")")
-        self.mod_data = self.matrixdat # Stupidly necessary because otherwise mod_data does not update
+        self.mod_data = self.matrixdat  # Stupidly necessary because otherwise mod_data does not update
 
         try:
             self.canvas.axes.cla()
@@ -2178,7 +2178,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def slider_action(self):
         sli1, sli2 = self.range_slider.value()
 
-        try:
+        try:# Show blue horizontal lines
             self._plot_hline1.set_ydata([sli1, sli1])
             self._plot_hline2.set_ydata([sli2, sli2])
 
@@ -2188,7 +2188,7 @@ class MainWindow(QtWidgets.QMainWindow):
         except:
             pass
 
-    def save_current_matrix_state(self):
+    def save_current_matrix_state(self):  # TODO should be saved in xlsx
         if not self.init_data.empty:
             self.statusBar().showMessage("Saving file, please wait...")
             fi = self.folder_path
