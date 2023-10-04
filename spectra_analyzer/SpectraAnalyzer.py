@@ -468,10 +468,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def create_mod_data(self):
         self.mod_data = self.init_data.copy()
+        self.mod_complete = self.mod_data
 
     def reset_mod_init_data(self):
         self.init_data = pd.DataFrame()
         self.mod_data = pd.DataFrame()
+        self.mod_complete = pd.DataFrame()
 
 
     def clean_all_fit_fields(self):
@@ -1397,14 +1399,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.is_giwaxs:
             fi = self.folder_path
             le = self.sample_name
-            # fi, le = self.dummy_folderpath_file.rsplit("/", 1)
-            # if self.start != 0 or self.end != self.xsize: # todo this might not work anymore (giwaxs measurement)
-            #     folder = self.dummy_folderpath_file.rsplit("/", 1)[0] + "/Fitting_" + le + "[" + str(
-            #         self.start) + "-" + str(
-            #         self.end) + "]/"
-            # else:
-            #     folder = fi + "/Fitting_" + le + "/"
-            # name = le
+
         else:
             if self.start != 0 or self.end != self.xsize:
                 folder = self.file_path.rsplit("/", 1)[0] + "/Fitting[" + str(self.start) + "-" + str(self.end) + "]/"
@@ -1865,7 +1860,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def plot_setup(self):
         self.setWindowTitle("Spectra Analyzer (" + self.sample_name + ")")
-        self.mod_data = self.matrixdat # Stupidly necessary because otherwise mod_data does not update
+        self.mod_data = self.matrixdat  # Stupidly necessary because otherwise mod_data does not update
 
         try:
             self.canvas.axes.cla()
@@ -2178,11 +2173,11 @@ class MainWindow(QtWidgets.QMainWindow):
     def slider_action(self):
         sli1, sli2 = self.range_slider.value()
 
-        try:
+        try:# Show blue horizontal lines
             self._plot_hline1.set_ydata([sli1, sli1])
             self._plot_hline2.set_ydata([sli2, sli2])
 
-            self.mod_data = self.mod_data.iloc[sli1:sli2 + 1]
+            self.mod_data = self.mod_complete.iloc[sli1:sli2 + 1]
 
             self.scrollbar_action()
         except:
@@ -2192,20 +2187,12 @@ class MainWindow(QtWidgets.QMainWindow):
         if not self.init_data.empty:
             self.statusBar().showMessage("Saving file, please wait...")
             fi = self.folder_path
-            # le = self.sample_name
-            # try:
-            #     fi, le = self.dummy_folderpath_file.rsplit("/", 1)
-            # except:
-            #     fi, le = self.file_path.rsplit("/", 1)
 
             filename = \
                 QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', directory=fi,
-                                                      filter="CSV (*.csv) ;; Excel (*.xlsx)")[0]
+                                                      filter="Excel (*.xlsx)")[0]
 
-            if ".xlsx" in filename:
-                self.mod_data.to_excel(filename)
-            else:
-                self.mod_data.to_csv(filename)
+            self.mod_data.to_excel(filename)
 
             self.statusBar().showMessage("File saved!", 5000)
         else:
@@ -2224,6 +2211,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.bar_update_plots(bar)
 
     def bar_update_plots(self, bar):
+        self.yarray = self.mod_data.index
         self._plot_ref.set_xdata(self.yarray.values)
         self._plot_ref.set_ydata(self.mod_data.iloc[:, [bar]].T.values[0])
 
