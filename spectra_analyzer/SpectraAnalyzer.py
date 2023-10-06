@@ -559,10 +559,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def save_heatplot_giwaxs(self):
         if not self.init_data.empty:
-            # TODO check that this works for any curve, not just giwaxs
             # fi, le = self.dummy_folderpath_file.rsplit("/", 1)
             fi = self.folder_path
             le = self.sample_name
+            fig_path = fi + "/0_heatplot_" + le + ".png"
 
             ticks_n = 10
 
@@ -651,10 +651,12 @@ class MainWindow(QtWidgets.QMainWindow):
                 else:
                     fig.text(0.5, 0.08, 'Time (seconds)', ha='center')
 
-                fig.savefig(fi + "/0_heatplot_" + le + ".png", dpi=300)
+                fig.savefig(fig_path, dpi=300)
+                self.statusBar().showMessage(f"Image saved in {fig_path}", 5000)
                 plt.close()
             except:
-                self.savnac.figh.savefig(fi + "/0_heatplot_" + le + ".png", dpi=300)
+                self.savnac.figh.savefig(fig_path, dpi=300)
+                self.statusBar().showMessage(f"Image saved in {fig_path}", 5000)
         else:
             self.statusBar().showMessage("Data file has not been selected yet!", 5000)
 
@@ -2191,6 +2193,11 @@ class MainWindow(QtWidgets.QMainWindow):
             filename = \
                 QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', directory=fi,
                                                       filter="Excel (*.xlsx)")[0]
+
+            xls = ".xlsx"
+            if xls not in filename:
+                filename = filename + xls
+
 
             self.mod_data.to_excel(filename)
 
