@@ -957,10 +957,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.init_data.columns = [combined.eta, combined.DegC]
             self.comb_data = combined[["eta", "DegC"]]
         else:
-            self.init_data.columns = [combined.Time, combined.DegC]
+            # self.init_data.columns = [combined.Time, combined.DegC]
+            self.init_data.columns = ['Time', 'DegC']
             self.comb_data = combined[["Time", "DegC"]]
-
-        print(self.init_data)
 
     def extract_data_for_axis(self):
         if self.is_giwaxs:
@@ -1141,8 +1140,34 @@ class MainWindow(QtWidgets.QMainWindow):
         self.LEend.setText(str(self.mod_data.shape[1] - 1))
 
     def read_fitting_range(self):
-        self.start = int(self.LEstart.text())
-        self.end = int(self.LEend.text())
+        # Read buttons and number of frames
+        string_start = self.LEstart.text()
+        string_end = self.LEend.text()
+
+        length = self.xsize
+
+        # Make sure numbers are within bounds
+        if not string_start.isdigit() or int(string_start) < 0:
+            fstart = 0
+        elif int(string_start) > int(string_end) or int(string_start) > length:
+            fstart = np.min([int(string_end), length]) - 10
+        else:
+            fstart = int(self.LEstart.text())
+
+        if not string_end.isdigit() or int(string_end) > length:
+            fend = length
+        elif int(string_end) < fstart or int(string_end) < 0:
+            fend = fstart + 10
+        else:
+            fend = int(self.LEend.text())
+
+        # Fix entry fields
+        self.LEstart.setText(str(fstart))
+        self.LEend.setText(str(fend))
+
+        # Save variables
+        self.start = fstart
+        self.end = fend
 
     def remove_dummy_columns(self):
         non_floats = []
