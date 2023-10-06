@@ -177,8 +177,8 @@ class MainWindow(QtWidgets.QMainWindow):
         ]
         functions_4 = [
             {"name": "Save &fitting curves only (snapshot)", "shortcut": "", "callback": self.save_snapshot_data},
-            {"name": "Save &current matrix dataset", "shortcut": "", "callback": self.save_current_matrix_state},
-            {"name": "Save &initial matrix dataset", "shortcut": "", "callback": self.save_data_2DMatrix},
+            {"name": "Save &modified matrix dataset", "shortcut": "", "callback": self.save_matrix_modified},
+            {"name": "Save &unmodified matrix dataset", "shortcut": "", "callback": self.save_matrix_unmodified},
             {"name": "Save &heatplot as png", "shortcut": "", "callback": self.save_heatplot_giwaxs},
         ]
         modify_menu = mainMenu.addMenu("&Modify")
@@ -400,12 +400,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.bar_update_plots(0)
         self.statusBar().showMessage("")
 
-    def save_data_2DMatrix(self):
-        if not self.init_data.empty:
-            # fi, le = self.dummy_folderpath_file.rsplit("/", 1)
-            self.init_data.to_excel(self.folder_path + "/0_collected_" + self.sample_name + ".xlsx")
-        else:
-            self.statusBar().showMessage("Data file has not been selected yet!", 5000)
+    def save_matrix_unmodified(self):
+        variable = "initial"
+        self.save_dataframe_to_file(variable)
+        # if not self.init_data.empty:
+        #     # fi, le = self.dummy_folderpath_file.rsplit("/", 1)
+        #     self.init_data.to_excel(self.folder_path + "/0_collected_" + self.sample_name + ".xlsx")
+        # else:
+        #     self.statusBar().showMessage("Data file has not been selected yet!", 5000)
 
     def clean_dead_pixel(self):
         if not self.init_data.empty:
@@ -559,10 +561,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def save_heatplot_giwaxs(self):
         if not self.init_data.empty:
-            # TODO check that this works for any curve, not just giwaxs
             # fi, le = self.dummy_folderpath_file.rsplit("/", 1)
             fi = self.folder_path
             le = self.sample_name
+            fig_path = fi + "/0_heatplot_" + le + ".png"
 
             ticks_n = 10
 
@@ -651,10 +653,12 @@ class MainWindow(QtWidgets.QMainWindow):
                 else:
                     fig.text(0.5, 0.08, 'Time (seconds)', ha='center')
 
-                fig.savefig(fi + "/0_heatplot_" + le + ".png", dpi=300)
+                fig.savefig(fig_path, dpi=300)
+                self.statusBar().showMessage(f"Image saved in {fig_path}", 5000)
                 plt.close()
             except:
-                self.savnac.figh.savefig(fi + "/0_heatplot_" + le + ".png", dpi=300)
+                self.savnac.figh.savefig(fig_path, dpi=300)
+                self.statusBar().showMessage(f"Image saved in {fig_path}", 5000)
         else:
             self.statusBar().showMessage("Data file has not been selected yet!", 5000)
 
@@ -955,10 +959,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.init_data.columns = [combined.eta, combined.DegC]
             self.comb_data = combined[["eta", "DegC"]]
         else:
-            self.init_data.columns = [combined.Time, combined.DegC]
+            # self.init_data.columns = [combined.Time, combined.DegC]
+            self.init_data.columns = ['Time', 'DegC']
             self.comb_data = combined[["Time", "DegC"]]
-
-        print(self.init_data)
 
     def extract_data_for_axis(self):
         if self.is_giwaxs:
@@ -1099,7 +1102,6 @@ class MainWindow(QtWidgets.QMainWindow):
             print("File row length is too small")
             raise Exception("Check data file for inconsistent symbols")
 
-#todo add a load_single_array
     def load_single_matrix_file(self):
         self.statusBar().showMessage("Loading file, please be patient...")
 
@@ -1139,8 +1141,34 @@ class MainWindow(QtWidgets.QMainWindow):
         self.LEend.setText(str(self.mod_data.shape[1] - 1))
 
     def read_fitting_range(self):
-        self.start = int(self.LEstart.text())
-        self.end = int(self.LEend.text())
+        # Read buttons and number of frames
+        string_start = self.LEstart.text()
+        string_end = self.LEend.text()
+
+        length = self.xsize
+
+        # Make sure numbers are within bounds
+        if not string_start.isdigit() or int(string_start) < 0:
+            fstart = 0
+        elif int(string_start) > int(string_end) or int(string_start) > length:
+            fstart = np.min([int(string_end), length]) - 10
+        else:
+            fstart = int(self.LEstart.text())
+
+        if not string_end.isdigit() or int(string_end) > length:
+            fend = length
+        elif int(string_end) < fstart or int(string_end) < 0:
+            fend = fstart + 10
+        else:
+            fend = int(self.LEend.text())
+
+        # Fix entry fields
+        self.LEstart.setText(str(fstart))
+        self.LEend.setText(str(fend))
+
+        # Save variables
+        self.start = fstart
+        self.end = fend
 
     def remove_dummy_columns(self):
         non_floats = []
@@ -2183,18 +2211,43 @@ class MainWindow(QtWidgets.QMainWindow):
         except:
             pass
 
-    def save_current_matrix_state(self):
+    def save_matrix_modified(self):
+        variable = "modified"
+        self.save_dataframe_to_file(variable)
+
+    def save_dataframe_to_file(self, variable):
         if not self.init_data.empty:
             self.statusBar().showMessage("Saving file, please wait...")
             fi = self.folder_path
+            le = self.sample_name
+
+            if variable == "modified":
+                save_df = self.mod_data
+                addendum = "\\0_modified_" + le
+            elif variable == "initial":
+                save_df = self.init_data
+                addendum = "\\0_initial_" + le
+            else:
+                pass
 
             filename = \
-                QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', directory=fi,
-                                                      filter="Excel (*.xlsx)")[0]
+                QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', directory=fi+addendum,
+                                                      filter="CSV (*.csv);;Text (*.txt);;Excel (*.xlsx)")[0]
 
-            self.mod_data.to_excel(filename)
+            extensions = [".xlsx", ".txt", ".csv"]
 
-            self.statusBar().showMessage("File saved!", 5000)
+            if not any(filename.endswith(ext) for ext in extensions):
+                filename += ".txt"
+
+            for ext in extensions:
+                if "xlsx" in filename:
+                    save_df.to_excel(filename)
+                elif "txt":
+                    save_df.to_csv(filename, sep="\t", header=True, index=True)
+                elif "csv":
+                    save_df.to_csv(filename, sep=",", header=True, index=True)
+
+            self.statusBar().showMessage(f"File saved as {filename}", 5000)
         else:
             self.statusBar().showMessage("Data file has not been selected yet!", 5000)
 
