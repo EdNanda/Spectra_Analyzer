@@ -177,8 +177,8 @@ class MainWindow(QtWidgets.QMainWindow):
         ]
         functions_4 = [
             {"name": "Save &fitting curves only (snapshot)", "shortcut": "", "callback": self.save_snapshot_data},
-            {"name": "Save &current matrix dataset", "shortcut": "", "callback": self.save_current_matrix_state},
-            {"name": "Save &initial matrix dataset", "shortcut": "", "callback": self.save_data_2DMatrix},
+            {"name": "Save &modified matrix dataset", "shortcut": "", "callback": self.save_matrix_modified},
+            {"name": "Save &unmodified matrix dataset", "shortcut": "", "callback": self.save_matrix_unmodified},
             {"name": "Save &heatplot as png", "shortcut": "", "callback": self.save_heatplot_giwaxs},
         ]
         modify_menu = mainMenu.addMenu("&Modify")
@@ -400,12 +400,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.bar_update_plots(0)
         self.statusBar().showMessage("")
 
-    def save_data_2DMatrix(self):
-        if not self.init_data.empty:
-            # fi, le = self.dummy_folderpath_file.rsplit("/", 1)
-            self.init_data.to_excel(self.folder_path + "/0_collected_" + self.sample_name + ".xlsx")
-        else:
-            self.statusBar().showMessage("Data file has not been selected yet!", 5000)
+    def save_matrix_unmodified(self):
+        variable = "initial"
+        self.save_dataframe_to_file(variable)
+        # if not self.init_data.empty:
+        #     # fi, le = self.dummy_folderpath_file.rsplit("/", 1)
+        #     self.init_data.to_excel(self.folder_path + "/0_collected_" + self.sample_name + ".xlsx")
+        # else:
+        #     self.statusBar().showMessage("Data file has not been selected yet!", 5000)
 
     def clean_dead_pixel(self):
         if not self.init_data.empty:
@@ -1100,7 +1102,6 @@ class MainWindow(QtWidgets.QMainWindow):
             print("File row length is too small")
             raise Exception("Check data file for inconsistent symbols")
 
-#todo add a load_single_array
     def load_single_matrix_file(self):
         self.statusBar().showMessage("Loading file, please be patient...")
 
@@ -2210,23 +2211,43 @@ class MainWindow(QtWidgets.QMainWindow):
         except:
             pass
 
-    def save_current_matrix_state(self):
+    def save_matrix_modified(self):
+        variable = "modified"
+        self.save_dataframe_to_file(variable)
+
+    def save_dataframe_to_file(self, variable):
         if not self.init_data.empty:
             self.statusBar().showMessage("Saving file, please wait...")
             fi = self.folder_path
+            le = self.sample_name
+
+            if variable == "modified":
+                save_df = self.mod_data
+                addendum = "\\0_modified_" + le
+            elif variable == "initial":
+                save_df = self.init_data
+                addendum = "\\0_initial_" + le
+            else:
+                pass
 
             filename = \
-                QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', directory=fi,
-                                                      filter="Excel (*.xlsx)")[0]
+                QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', directory=fi+addendum,
+                                                      filter="CSV (*.csv);;Text (*.txt);;Excel (*.xlsx)")[0]
 
-            xls = ".xlsx"
-            if xls not in filename:
-                filename = filename + xls
+            extensions = [".xlsx", ".txt", ".csv"]
 
+            if not any(filename.endswith(ext) for ext in extensions):
+                filename += ".txt"
 
-            self.mod_data.to_excel(filename)
+            for ext in extensions:
+                if "xlsx" in filename:
+                    save_df.to_excel(filename)
+                elif "txt":
+                    save_df.to_csv(filename, sep="\t", header=True, index=True)
+                elif "csv":
+                    save_df.to_csv(filename, sep=",", header=True, index=True)
 
-            self.statusBar().showMessage("File saved!", 5000)
+            self.statusBar().showMessage(f"File saved as {filename}", 5000)
         else:
             self.statusBar().showMessage("Data file has not been selected yet!", 5000)
 
