@@ -11,12 +11,13 @@ from lmfit.models import PseudoVoigtModel, ExponentialGaussianModel, SkewedGauss
 
 class VideoMaker:
     def __init__(self, paths, lists, values, gui):
-        self.raw_file, self.fit_file, self.save_file = paths
+        # self.raw_file, self.fit_file, self.save_file = paths
+        self.raw_data, self.fit_file, self.save_file = paths
         self.bool_basic, self.names_basic, self.bool_list, self.model_list, self.names_list = lists
         self.name_xaxis, self.name_yaxis, self.srt_frame, self.end_frame, self.fps = values
         self.gui = gui
 
-        self.raw_data = pd.read_excel(self.raw_file, header=0, index_col=0, skiprows=0)
+        # self.raw_data = pd.read_excel(self.raw_file, header=0, index_col=0, skiprows=0)
         self.fit_data = pd.read_excel(self.fit_file, header=0, index_col=0)
         # self.fit_data = self.fit_data.reset_index(drop=True)
 
@@ -94,50 +95,15 @@ class VideoMaker:
         return 0
 
     def data_collect(self, fitting_data, i):
-        # print("data collect " + str(i))
         x = self.xvals  # raw_data.index.values  ##needed for fitting and plotting
         fit_pars = fitting_data.loc[[i]]
 
-        # model_classes = {
-        #     "Linear": LinearModel,
-        #     "Polynomial": PolynomialModel,
-        #     "Exponential": ExponentialModel,
-        #     "Gaussian": GaussianModel,
-        #     "Lorentzian": LorentzianModel,
-        #     "Voigt": VoigtModel,
-        #     "PseudoVoigt": PseudoVoigtModel,
-        #     "ExpGaussian": ExponentialGaussianModel,
-        #     "SkewedGaussian": SkewedGaussianModel,
-        #     "SkewedVoigt": SkewedVoigtModel,
-        # }
-        #
-        # gmodel = None  # Initialize nmodel outside the loop
-        #
-        # for c, m in enumerate(self.bool_list):
-        #     if m:
-        #         print(c, self.model_list[c], self.names_list[c])
-        #         model_name = self.model_list[c]
-        #
-        #         if model_name not in model_classes:
-        #             raise Exception(f"Model '{model_name}' does not exist")
-        #
-        #         model_class = model_classes[model_name]
-        #         namemodel = model_class(prefix=self.names_list[c])
-        #
-        #         if c == 0:
-        #             params = namemodel.make_params()
-        #             gmodel = namemodel
-        #         else:
-        #             params.update(namemodel.make_params())
-        #             gmodel += namemodel
-        nmodel = Model(self.trivial)
+        # Initialize parameters
         gmodel = Model(self.trivial)
         params = None
-        # print(self.names_list)
-        # print(self.bool_list)
         for c, m in enumerate(self.bool_list):
             if m:
-                # print(c,self.model_list[c], self.names_list[c])
+                # Correctly identify curves
                 if self.model_list[c] == "Linear":
                     nmodel = LinearModel(prefix=self.names_list[c]+"_")
                 elif self.model_list[c] == "Polynomial":
@@ -198,10 +164,8 @@ class VideoMaker:
                         params.add(new_ka, value=vals_dict[new_ka], vary=False)
                     else:
                         pass
-
         else:
             raise Exception("Remove background models from fit file and try again")
-
 
         dataplot = self.raw_data.iloc[:, i].values
         out = gmodel.fit(dataplot, params, x=x)
