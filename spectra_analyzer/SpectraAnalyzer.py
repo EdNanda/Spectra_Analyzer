@@ -70,13 +70,17 @@ class Worker(QRunnable):
 
 
 class MplCanvas_heatplot(FigureCanvasQTAgg):
-    def __init__(self, parent=None, width=5, height=4, dpi=100):
+    def __init__(self, parent=None, width=5, height=4, dpi=100, title=""):
         self.figh = Figure(figsize=(width, height), dpi=dpi)
         self.axes = self.figh.add_subplot(111)
         self.axes.set_xlabel('Time (s)')
         self.axes.set_ylabel('Wavelength (nm)')
+        self.axes.set_title(title)
 
         super(MplCanvas_heatplot, self).__init__(self.figh)
+
+    def update_title(self, new_title):
+        self.axes.set_title(new_title)
 
 
 class MplCanvas(FigureCanvasQTAgg):
@@ -585,6 +589,8 @@ class MainWindow(QtWidgets.QMainWindow):
             fig_folder = fi + "/" + le + ".png"
             fig_path = self.save_ask_name(fig_folder, "image")
 
+            new_name = fig_path.rsplit("/",1)[-1].split(".")[0]
+
             ticks_n = 10
 
             try:
@@ -647,6 +653,7 @@ class MainWindow(QtWidgets.QMainWindow):
                         axs[0].set_ylabel(r"2$\theta$ (Degree)")
                         axs[0].set_yticks(np.linspace(0, len(self.yarray), 8))
                         axs[0].set_yticklabels(np.linspace(self.yarray[0], self.yarray[-1], 8).astype(int))
+                        axs[0].set_title(new_name)
 
                     else:
                         pass
@@ -676,6 +683,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.statusBar().showMessage(f"Image saved in {fig_path}", 5000)
                 plt.close()
             except:
+                self.savnac.update_title(new_name)
                 self.savnac.figh.savefig(fig_path, dpi=300)
                 self.statusBar().showMessage(f"Image saved in {fig_path}", 5000)
         else:
