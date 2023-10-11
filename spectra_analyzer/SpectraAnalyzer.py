@@ -563,12 +563,27 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.statusBar().showMessage("Fit parameter file not loaded", 5000)
 
+    def save_ask_name(self, path, type):
+        filename, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save File", path, "All Files (*)")
+
+        if type == "image":
+            if ".png" not in filename:# or ".jpg" not in filename:
+                filename += ".png"
+        elif type == "data":
+            if ".csv" not in filename or ".xlsx" not in filename or ".txt" not in filename:
+                filename += ".csv"
+        else:
+            pass
+
+        return filename
+
     def save_heatplot_giwaxs(self):
         if not self.init_data.empty:
             # fi, le = self.dummy_folderpath_file.rsplit("/", 1)
             fi = self.folder_path
             le = self.sample_name
-            fig_path = fi + "/0_heatplot_" + le + ".png"
+            fig_folder = fi + "/" + le + ".png"
+            fig_path = self.save_ask_name(fig_folder, "image")
 
             ticks_n = 10
 
