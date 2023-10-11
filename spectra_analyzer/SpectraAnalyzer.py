@@ -109,6 +109,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.is_subtract = False
 
         self.constraints = []
+        self.folder_path = ""
 
         self.GUI_menubar_setup()
         self.GUI_widgets()
@@ -664,14 +665,15 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def select_file(self):
-        # print("  select_file")
-        old_folder = "C:\\Data\\test\\"
+        default_folder = os.path.dirname(__file__)
 
-        if not old_folder:  # If empty, go to default
-            old_folder = "C:\\Data\\"
+        if not self.folder_path == "":
+            open_folder = self.folder_path
+        else:
+            open_folder = os.path.dirname(default_folder) + "\\Data_examples\\"
 
         # Select directory from selection
-        directory = QtWidgets.QFileDialog.getOpenFileName(self, "Select a file", old_folder)
+        directory = QtWidgets.QFileDialog.getOpenFileName(self, "Select a file", open_folder)
 
         if directory[0] != "":  # if cancelled, keep the old one
             self.file_path = directory[0]
