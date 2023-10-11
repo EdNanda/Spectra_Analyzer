@@ -271,6 +271,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.threadpool = QThreadPool.globalInstance()
 
         self.ScrollbarTime = QScrollBar()
+        self.ScrollbarTime.setFocusPolicy(Qt.StrongFocus)
+        self.ScrollbarTime.setFocus()
+        self.ScrollbarTime.setInvertedControls(False)
         self.ScrollbarTime.setOrientation(Qt.Horizontal)
         self.ScrollbarTime.setMaximum(0)
         self.ScrollbarTime.setStyleSheet("background : gray;")
