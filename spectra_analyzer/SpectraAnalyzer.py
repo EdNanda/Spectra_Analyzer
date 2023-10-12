@@ -685,6 +685,7 @@ class MainWindow(QtWidgets.QMainWindow):
             except:
                 self.savnac.update_title(new_name)
                 self.savnac.figh.savefig(fig_path, dpi=300)
+                self.savnac.update_title("")
                 self.statusBar().showMessage(f"Image saved in {fig_path}", 5000)
         else:
             self.statusBar().showMessage("Data file has not been selected yet!", 5000)
