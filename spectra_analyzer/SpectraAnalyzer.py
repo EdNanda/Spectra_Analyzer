@@ -107,6 +107,7 @@ class MainWindow(QtWidgets.QMainWindow):
                        "Lorentzian", "Voigt", "PseudoVoigt", "SkewedVoigt",
                        "ExpGaussian", "SkewedGaussian", ]
         self.init_data = pd.DataFrame()
+        self.fit_results = pd.DataFrame()
         self.is_giwaxs = False
         self.is_pero_peak = False
         self.is_file_selected = False
@@ -541,7 +542,7 @@ class MainWindow(QtWidgets.QMainWindow):
             # raise Exception("Fit parameter file not saved")
             # return
 
-    def populate_fit_fields(self):
+    def populate_fit_fields(self): # Only for loading information from files
         filename = QtWidgets.QFileDialog.getOpenFileName(self, "Select file with fitting parameters?", "",
                                                          "fit (*.fit)")
 
@@ -1740,6 +1741,48 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.statusBar().showMessage("No fitting models selected", 5000)
                 self.fit_model_bool = False
 
+    def fitmodel_make_table(self):
+        inter_vals = ["amplitude", "center", "sigma"]
+        self.fit_results = pd.DataFrame()
+        all_curves = []
+        for key in self.fit_vals.keys():
+            curve_name = key.rsplit("_",1)[0]
+            curve_value= key.rsplit("_",1)[1]
+
+            if curve_name not in all_curves:
+                all_curves.append(curve_name)
+            if curve_value in inter_vals:
+                # if self.fit_vals[key] > 20:
+                #     rounded_val = int(np.round(self.fit_vals[key],0))
+                if self.fit_vals[key] > 10:
+                    rounded_val = np.round(self.fit_vals[key], 1)
+                elif self.fit_vals[key] > 0.1:
+                    rounded_val = np.round(self.fit_vals[key], 2)
+                else:
+                    rounded_val = np.round(self.fit_vals[key], 3)
+                self.fit_results.at[curve_name, curve_value] = rounded_val
+
+        self.update_plot_table()
+
+    def update_plot_table(self):
+        if self.plot_table is not None:
+            self.plot_table.remove()
+            self.plot_table = None
+
+        left, bottom, width, height = 0.7, 0.5, 0.25, 0.2
+        self.plot_table = self.canvas.axes.table(
+            cellText=self.fit_results.reset_index().values,  # data now includes the index
+            colLabels=[''] + self.fit_results.columns.tolist(),  # headers now include the index label
+            loc='upper right',
+            bbox=[left, bottom, width, height]  # these are in figure fraction
+        )
+
+        # Adjust properties of the table if desired
+        self.plot_table.auto_set_font_size(False)
+        self.plot_table.auto_set_column_width(col=list(range(len(self.fit_results.reset_index().columns))))
+        self.plot_table.set_fontsize(10)
+        self.plot_table.scale(1, 1.5)
+
     def fitmodel_plot(self):
         self.statusBar().showMessage("Fitting...   This might take some time")
 
@@ -1755,6 +1798,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.statusBar().showMessage("## One of the models shows an error ##", 10000)
 
         self.fit_vals = self.result.values
+        self.fitmodel_make_table()
+
         # self.add_fitting_pars_to_entryfields()
         self.add_fitting_data_to_gui()
 
@@ -1934,7 +1979,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if "0.000" in index_name:
             axis_name = "Wavelength (nm)"
         elif "Wavelength" in index_name:
-            axis_name = index_name + " (nm)"
+            axis_name = index_name
         elif "Energy" in index_name:
             axis_name = index_name + " (eV)"
         elif "TTh" in index_name:
@@ -1950,20 +1995,20 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 self.t_label = "Time"
         else:
-
             self.canvas.axes.set_xlabel(axis_name)
             self.t_label = "Time"
 
         # Set text fields for time and position
-        self.text_time = self.canvas.axes.text(0.4, 0.9, self.t_label + " 0.0",
+        self.text_time = self.canvas.axes.text(0.05, 0.9, self.t_label + " 0.0",
                                                horizontalalignment='left', verticalalignment='center',
                                                transform=self.canvas.axes.transAxes)
-        self.text_pos = self.canvas.axes.text(0.4, 0.83, "Frame 0",
+        self.text_pos = self.canvas.axes.text(0.05, 0.83, "Frame 0",
                                               horizontalalignment='left', verticalalignment='center',
                                               transform=self.canvas.axes.transAxes)
 
         self.canvas.axes.set_ylim([self.min_int * 0.9, self.max_int * 1.1])  # Set y-axis range
         self.canvas.axes.legend(loc="best")  # Position legend smartly
+        self.canvas.axes.set_title(self.sample_name)
 
         # Second plot
         if self.is_giwaxs:
@@ -1974,6 +2019,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._plot_vline, = self.savnac.axes.plot([0, 0], [0, self.ysize], 'r')  # Vertical line (Time select)
         self._plot_hline1, = self.savnac.axes.plot([0, self.xsize], [0, 0], 'b')  # Horizontal line1 (Up boundary)
         self._plot_hline2, = self.savnac.axes.plot([0, self.xsize], [0, 0], 'b')  # Horizontal line2 (Down boundary)
+        self.plot_table = None  # Start table
 
         if self.is_giwaxs:
             #if "eta" in self.gname:
