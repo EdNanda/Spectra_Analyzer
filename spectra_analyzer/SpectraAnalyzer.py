@@ -94,6 +94,15 @@ class MplCanvas(FigureCanvasQTAgg):
         super(MplCanvas, self).__init__(fig)
 
 
+class CustomNavigationToolbar(NavigationToolbar):
+    def __init__(self, canvas, parent, coordinates=True):
+        super().__init__(canvas, parent, coordinates)
+
+        clear_action = QAction('Clear Crosshairs', self)
+        clear_action.triggered.connect(parent.plot_clear_crosshairs)  # parent here is your main window
+        self.addAction(clear_action)
+
+
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
@@ -115,6 +124,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.constraints = []
         self.folder_path = ""
+        self.crosshairs = []
+        self.plot_annotations = []
 
         self.GUI_menubar_setup()
         self.GUI_widgets()
@@ -234,6 +245,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.BMulti.setText("Fit range")
         self.BMulti.setToolTip("Fit the whole selected range")
         self.BMulti.setFixedWidth(120)
+        self.results_table = QCheckBox("Show results table", self)
+        self.results_table.setChecked(True)
+        self.results_table.setToolTip("A table showing the results of the\nsingle fit will be displayed")
         self.Btest = QToolButton()
         self.Btest.setText("test")
         self.Btest.setToolTip("Click if you dare...")
@@ -255,7 +269,8 @@ class MainWindow(QtWidgets.QMainWindow):
         Lmulti.addWidget(self.L2, 0, 2)
         Lmulti.addWidget(self.LEend, 0, 3)
         Lmulti.addWidget(self.BMulti, 1, 1, 1, 2)
-        Lmulti.addWidget(self.Btest, 2, 0)
+        Lmulti.addWidget(self.results_table, 2, 0)
+        Lmulti.addWidget(self.Btest, 3, 0)
 
         Lend = QHBoxLayout()
         Lend.addLayout(Lmulti)
@@ -284,13 +299,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ScrollbarTime.setStyleSheet("background : gray;")
 
         # Create toolbar, passing canvas as first parament, parent (self, the MainWindow) as second.
-        toolbar = NavigationToolbar(self.canvas, self)
+        # toolbar = NavigationToolbar(self.canvas, self)
+        self.toolbar = CustomNavigationToolbar(self.canvas, self)
         Lgraph = QVBoxLayout()
         LgrTop = QVBoxLayout()
         self.canvas.setMinimumWidth(500)  # Fix width so it doesn't change
         self.range_slider = QRangeSlider(QtCore.Qt.Vertical)
         self.range_slider.setValue((0, 100))
-        LgrTop.addWidget(toolbar)
+        LgrTop.addWidget(self.toolbar)
         LgrTop.addWidget(self.canvas, 10)
         LgrTop.addWidget(self.ScrollbarTime, 1)
 
@@ -330,6 +346,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.Badd.pressed.connect(self.model_row_add)
         self.Bsubtract.pressed.connect(self.model_row_remove)
         self.infoMenu.triggered.connect(self.popup_info)
+        self.canvas.mpl_connect('button_press_event', self.plot_crosshairs_on_click)
         # self.Btest.pressed.connect(self.clean_dead_pixel)
 
     def menu_load_single_matrix(self):
@@ -1769,19 +1786,20 @@ class MainWindow(QtWidgets.QMainWindow):
             self.plot_table.remove()
             self.plot_table = None
 
-        left, bottom, width, height = 0.7, 0.5, 0.25, 0.2
-        self.plot_table = self.canvas.axes.table(
-            cellText=self.fit_results.reset_index().values,  # data now includes the index
-            colLabels=[''] + self.fit_results.columns.tolist(),  # headers now include the index label
-            loc='upper right',
-            bbox=[left, bottom, width, height]  # these are in figure fraction
-        )
+        if self.results_table.isChecked():
+            left, bottom, width, height = 0.7, 0.5, 0.25, 0.2
+            self.plot_table = self.canvas.axes.table(
+                cellText=self.fit_results.reset_index().values,  # data now includes the index
+                colLabels=[''] + self.fit_results.columns.tolist(),  # headers now include the index label
+                loc='upper right',
+                bbox=[left, bottom, width, height]  # these are in figure fraction
+            )
 
-        # Adjust properties of the table if desired
-        self.plot_table.auto_set_font_size(False)
-        self.plot_table.auto_set_column_width(col=list(range(len(self.fit_results.reset_index().columns))))
-        self.plot_table.set_fontsize(10)
-        self.plot_table.scale(1, 1.5)
+            # Adjust properties of the table if desired
+            self.plot_table.auto_set_font_size(False)
+            self.plot_table.auto_set_column_width(col=list(range(len(self.fit_results.reset_index().columns))))
+            self.plot_table.set_fontsize(10)
+            self.plot_table.scale(1, 1.5)
 
     def fitmodel_plot(self):
         self.statusBar().showMessage("Fitting...   This might take some time")
@@ -2054,6 +2072,39 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.savnac.axes.set_xticklabels(np.around(np.linspace(0, self.xarray[-1], 8), 1))
         except:
             self.savnac.axes.set_xticklabels(np.around(np.linspace(0, len(self.xarray), 8)), 1)
+
+    def plot_crosshairs_on_click(self, event):
+        # Your existing on_click method to draw crosshairs
+
+        if event.inaxes is not self.canvas.figure.gca():
+            return
+
+        x, y = event.xdata, event.ydata
+
+        # Create vertical and horizontal lines (crosshairs)
+        vertical_line = self.canvas.figure.gca().axvline(x=x, color='gray', linestyle='--')
+        horizontal_line = self.canvas.figure.gca().axhline(y=y, color='gray', linestyle='--')
+
+        # Create annotation
+        annotation = self.canvas.figure.gca().annotate(f'({x:.2f}, {y:.2f})', (x, y), textcoords="offset points",
+                                                       xytext=(0, 10), ha='center')
+
+        self.crosshairs.extend([vertical_line, horizontal_line])
+        self.plot_annotations.append(annotation)
+
+        self.canvas.draw()
+
+    def plot_clear_crosshairs(self):
+        # Clear the drawn crosshairs and annotations
+        while self.crosshairs:
+            line = self.crosshairs.pop()
+            line.remove()
+        while self.plot_annotations:
+            annotation = self.plot_annotations.pop()
+            annotation.remove()
+
+        # Redraw the canvas
+        self.canvas.draw()
 
     def rename_plot_axis(self):
         self.dgiw = QDialog()
