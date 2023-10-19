@@ -33,6 +33,7 @@ from datetime import datetime
 from glob import glob
 from functools import partial
 from matplotlib import rcParams
+sys.path.append("../resources/")
 from resources.animation_maker import VideoMaker
 
 rcParams.update({'figure.autolayout': True})
