@@ -269,7 +269,7 @@ class MainWindow(QtWidgets.QMainWindow):
         Lmulti.addWidget(self.L2, 0, 2)
         Lmulti.addWidget(self.LEend, 0, 3)
         Lmulti.addWidget(self.BMulti, 1, 1, 1, 2)
-        Lmulti.addWidget(self.results_table, 2, 0)
+        Lmulti.addWidget(self.results_table, 2, 0, 1, 3)
         Lmulti.addWidget(self.Btest, 3, 0)
 
         Lend = QHBoxLayout()
