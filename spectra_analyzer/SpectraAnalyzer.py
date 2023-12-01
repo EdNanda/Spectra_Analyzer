@@ -121,6 +121,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.is_pero_peak = False
         self.is_file_selected = False
         self.is_subtract = False
+        self.is_ev_data = False
 
         self.constraints = []
         self.folder_path = ""
@@ -1635,6 +1636,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
                 slope = self.constraints[nn][0][0].text().replace(",", ".")
                 interc = self.constraints[nn][0][1].text().replace(",", ".")
+                slope = self.constraints[nn][0][0].text().replace(" ", "")
+                interc = self.constraints[nn][0][1].text().replace(" ", "")
 
                 if len(slope) > 0:
                     self.pars[model_name + "slope"].set(value=float(slope))
@@ -1681,6 +1684,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
                 amp = self.constraints[nn][0][0].text().replace(",", ".")
                 dec = self.constraints[nn][0][1].text().replace(",", ".")
+                amp = self.constraints[nn][0][0].text().replace(" ", "")
+                dec = self.constraints[nn][0][1].text().replace(" ", "")
 
                 if len(amp) >= 1:
                     self.pars[model_name + "amplitude"].set(value=float(amp))
@@ -1725,6 +1730,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 amp = self.constraints[nn][0][0].text().replace(",", ".")
                 cen = self.constraints[nn][0][1].text().replace(",", ".")
                 sig = self.constraints[nn][0][2].text().replace(",", ".")
+                amp = self.constraints[nn][0][0].text().replace(" ", "")
+                cen = self.constraints[nn][0][1].text().replace(" ", "")
+                sig = self.constraints[nn][0][2].text().replace(" ", "")
 
                 if len(amp) >= 1:
                     va = float(amp)
@@ -1859,6 +1867,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def convert_to_eV(self):
         if not self.init_data.empty:
+            self.is_ev_data = True
             # set variables
             hc = (4.135667696E-15) * (2.999792E8) * 1E9
             eV_conv = hc / self.yarray
@@ -1874,10 +1883,12 @@ class MainWindow(QtWidgets.QMainWindow):
             self.eV_axis = np.round(hc / axis, 1)
 
             # Rename mdata (this is what is always plotted)
-            self.mod_data = ev_df
+            self.init_data = ev_df.copy()
+            self.create_mod_data()
 
             # Update plot
             self.extract_data_for_axis()
+            # self.canvas.axes.set_xlim([self.eV_axis[0] * 0.9, self.eV_axis[-1] * 1.1])  # Set x-axis range
             self.plot_setup()
             self.bar_update_plots(0)
             # self.scrollbar_action()
@@ -1992,6 +2003,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # First plot
         self._plot_ref, = self.canvas.axes.plot(self.yarray, self.yfirst, 'r', label="Experiment")
+        self.canvas.axes.margins(0.05, 0.05)
+        # self.canvas.axes.set_xlim([self.yarray[0] * 0.9, self.yarray[-1] * 1.1])  # Set x-axis range
         index_name = self.yarray.name
 
         if "0.000" in index_name:
@@ -2057,7 +2070,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Reset ticks to match data
         # Y-axis
-        if "Energy" in axis_name:
+        if self.is_ev_data:
             self.savnac.axes.set_yticks(np.linspace(0, len(self.yarray), 8))
             self.savnac.axes.set_yticklabels(self.eV_axis)
         else:
