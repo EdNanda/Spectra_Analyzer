@@ -73,13 +73,17 @@ class Worker(QRunnable):
 
 
 class MplCanvas_heatplot(FigureCanvasQTAgg):
-    def __init__(self, parent=None, width=5, height=4, dpi=100):
+    def __init__(self, parent=None, width=5, height=4, dpi=100, title=""):
         self.figh = Figure(figsize=(width, height), dpi=dpi)
         self.axes = self.figh.add_subplot(111)
         self.axes.set_xlabel('Time (s)')
         self.axes.set_ylabel('Wavelength (nm)')
+        self.axes.set_title(title)
 
         super(MplCanvas_heatplot, self).__init__(self.figh)
+
+    def update_title(self, new_title):
+        self.axes.set_title(new_title)
 
 
 class MplCanvas(FigureCanvasQTAgg):
@@ -91,6 +95,15 @@ class MplCanvas(FigureCanvasQTAgg):
         self.axes.grid(True, linestyle='--')
 
         super(MplCanvas, self).__init__(fig)
+
+
+class CustomNavigationToolbar(NavigationToolbar):
+    def __init__(self, canvas, parent, coordinates=True):
+        super().__init__(canvas, parent, coordinates)
+
+        clear_action = QAction('Clear Crosshairs', self)
+        clear_action.triggered.connect(parent.plot_clear_crosshairs)  # parent here is your main window
+        self.addAction(clear_action)
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -106,12 +119,17 @@ class MainWindow(QtWidgets.QMainWindow):
                        "Lorentzian", "Voigt", "PseudoVoigt", "SkewedVoigt",
                        "ExpGaussian", "SkewedGaussian", ]
         self.init_data = pd.DataFrame()
+        self.fit_results = pd.DataFrame()
         self.is_giwaxs = False
         self.is_pero_peak = False
         self.is_file_selected = False
         self.is_subtract = False
+        self.is_ev_data = False
 
         self.constraints = []
+        self.folder_path = ""
+        self.crosshairs = []
+        self.plot_annotations = []
 
         self.GUI_menubar_setup()
         self.GUI_widgets()
@@ -237,6 +255,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.BMulti.setText("Fit range")
         self.BMulti.setToolTip("Fit the whole selected range")
         self.BMulti.setFixedWidth(120)
+        self.results_table = QCheckBox("Show results table", self)
+        self.results_table.setChecked(True)
+        self.results_table.setToolTip("A table showing the results of the\nsingle fit will be displayed")
         self.Btest = QToolButton()
         self.Btest.setText("test")
         self.Btest.setToolTip("Click if you dare...")
@@ -258,7 +279,8 @@ class MainWindow(QtWidgets.QMainWindow):
         Lmulti.addWidget(self.L2, 0, 2)
         Lmulti.addWidget(self.LEend, 0, 3)
         Lmulti.addWidget(self.BMulti, 1, 1, 1, 2)
-        Lmulti.addWidget(self.Btest, 2, 0)
+        Lmulti.addWidget(self.results_table, 2, 0, 1, 3)
+        Lmulti.addWidget(self.Btest, 3, 0)
 
         Lend = QHBoxLayout()
         Lend.addLayout(Lmulti)
@@ -279,18 +301,22 @@ class MainWindow(QtWidgets.QMainWindow):
         self.threadpool = QThreadPool.globalInstance()
 
         self.ScrollbarTime = QScrollBar()
+        self.ScrollbarTime.setFocusPolicy(Qt.StrongFocus)
+        self.ScrollbarTime.setFocus()
+        self.ScrollbarTime.setInvertedControls(False)
         self.ScrollbarTime.setOrientation(Qt.Horizontal)
         self.ScrollbarTime.setMaximum(0)
         self.ScrollbarTime.setStyleSheet("background : gray;")
 
         # Create toolbar, passing canvas as first parament, parent (self, the MainWindow) as second.
-        toolbar = NavigationToolbar(self.canvas, self)
+        # toolbar = NavigationToolbar(self.canvas, self)
+        self.toolbar = CustomNavigationToolbar(self.canvas, self)
         Lgraph = QVBoxLayout()
         LgrTop = QVBoxLayout()
         self.canvas.setMinimumWidth(500)  # Fix width so it doesn't change
         self.range_slider = QRangeSlider(QtCore.Qt.Vertical)
         self.range_slider.setValue((0, 100))
-        LgrTop.addWidget(toolbar)
+        LgrTop.addWidget(self.toolbar)
         LgrTop.addWidget(self.canvas, 10)
         LgrTop.addWidget(self.ScrollbarTime, 1)
 
@@ -330,6 +356,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.Badd.pressed.connect(self.model_row_add)
         self.Bsubtract.pressed.connect(self.model_row_remove)
         self.infoMenu.triggered.connect(self.popup_info)
+        self.canvas.mpl_connect('button_press_event', self.plot_crosshairs_on_click)
         # self.Btest.pressed.connect(self.clean_dead_pixel)
 
     def menu_load_single_matrix(self):
@@ -542,7 +569,7 @@ class MainWindow(QtWidgets.QMainWindow):
             # raise Exception("Fit parameter file not saved")
             # return
 
-    def populate_fit_fields(self):
+    def populate_fit_fields(self): # Only for loading information from files
         filename = QtWidgets.QFileDialog.getOpenFileName(self, "Select file with fitting parameters?", "",
                                                          "fit (*.fit)")
 
@@ -568,12 +595,29 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.statusBar().showMessage("Fit parameter file not loaded", 5000)
 
+    def save_ask_name(self, path, type):
+        filename, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save File", path, "All Files (*)")
+
+        if type == "image":
+            if ".png" not in filename:# or ".jpg" not in filename:
+                filename += ".png"
+        elif type == "data":
+            if ".csv" not in filename or ".xlsx" not in filename or ".txt" not in filename:
+                filename += ".csv"
+        else:
+            pass
+
+        return filename
+
     def save_heatplot_giwaxs(self):
         if not self.init_data.empty:
             # fi, le = self.dummy_folderpath_file.rsplit("/", 1)
             fi = self.folder_path
             le = self.sample_name
-            fig_path = fi + "/0_heatplot_" + le + ".png"
+            fig_folder = fi + "/" + le + ".png"
+            fig_path = self.save_ask_name(fig_folder, "image")
+
+            new_name = fig_path.rsplit("/",1)[-1].split(".")[0]
 
             ticks_n = 10
 
@@ -637,6 +681,7 @@ class MainWindow(QtWidgets.QMainWindow):
                         axs[0].set_ylabel(r"2$\theta$ (Degree)")
                         axs[0].set_yticks(np.linspace(0, len(self.yarray), 8))
                         axs[0].set_yticklabels(np.linspace(self.yarray[0], self.yarray[-1], 8).astype(int))
+                        axs[0].set_title(new_name)
 
                     else:
                         pass
@@ -666,21 +711,24 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.statusBar().showMessage(f"Image saved in {fig_path}", 5000)
                 plt.close()
             except:
+                self.savnac.update_title(new_name)
                 self.savnac.figh.savefig(fig_path, dpi=300)
+                self.savnac.update_title("")
                 self.statusBar().showMessage(f"Image saved in {fig_path}", 5000)
         else:
             self.statusBar().showMessage("Data file has not been selected yet!", 5000)
 
 
     def select_file(self):
-        # print("  select_file")
-        old_folder = "C:\\Data\\test\\"
+        default_folder = os.path.dirname(__file__)
 
-        if not old_folder:  # If empty, go to default
-            old_folder = "C:\\Data\\"
+        if not self.folder_path == "":
+            open_folder = self.folder_path
+        else:
+            open_folder = os.path.dirname(default_folder) + "\\Data_examples\\"
 
         # Select directory from selection
-        directory = QtWidgets.QFileDialog.getOpenFileName(self, "Select a file", old_folder)
+        directory = QtWidgets.QFileDialog.getOpenFileName(self, "Select a file", open_folder)
 
         if directory[0] != "":  # if cancelled, keep the old one
             self.file_path = directory[0]
@@ -1600,6 +1648,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
                 slope = self.constraints[nn][0][0].text().replace(",", ".")
                 interc = self.constraints[nn][0][1].text().replace(",", ".")
+                slope = self.constraints[nn][0][0].text().replace(" ", "")
+                interc = self.constraints[nn][0][1].text().replace(" ", "")
 
                 if len(slope) > 0:
                     self.pars[model_name + "slope"].set(value=float(slope))
@@ -1646,6 +1696,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
                 amp = self.constraints[nn][0][0].text().replace(",", ".")
                 dec = self.constraints[nn][0][1].text().replace(",", ".")
+                amp = self.constraints[nn][0][0].text().replace(" ", "")
+                dec = self.constraints[nn][0][1].text().replace(" ", "")
 
                 if len(amp) >= 1:
                     self.pars[model_name + "amplitude"].set(value=float(amp))
@@ -1690,6 +1742,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 amp = self.constraints[nn][0][0].text().replace(",", ".")
                 cen = self.constraints[nn][0][1].text().replace(",", ".")
                 sig = self.constraints[nn][0][2].text().replace(",", ".")
+                amp = self.constraints[nn][0][0].text().replace(" ", "")
+                cen = self.constraints[nn][0][1].text().replace(" ", "")
+                sig = self.constraints[nn][0][2].text().replace(" ", "")
 
                 if len(amp) >= 1:
                     va = float(amp)
@@ -1723,6 +1778,49 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.statusBar().showMessage("No fitting models selected", 5000)
                 self.fit_model_bool = False
 
+    def fitmodel_make_table(self):
+        inter_vals = ["amplitude", "center", "sigma"]
+        self.fit_results = pd.DataFrame()
+        all_curves = []
+        for key in self.fit_vals.keys():
+            curve_name = key.rsplit("_",1)[0]
+            curve_value= key.rsplit("_",1)[1]
+
+            if curve_name not in all_curves:
+                all_curves.append(curve_name)
+            if curve_value in inter_vals:
+                # if self.fit_vals[key] > 20:
+                #     rounded_val = int(np.round(self.fit_vals[key],0))
+                if self.fit_vals[key] > 10:
+                    rounded_val = np.round(self.fit_vals[key], 1)
+                elif self.fit_vals[key] > 0.1:
+                    rounded_val = np.round(self.fit_vals[key], 2)
+                else:
+                    rounded_val = np.round(self.fit_vals[key], 3)
+                self.fit_results.at[curve_name, curve_value] = rounded_val
+
+        self.update_plot_table()
+
+    def update_plot_table(self):
+        if self.plot_table is not None:
+            self.plot_table.remove()
+            self.plot_table = None
+
+        if self.results_table.isChecked():
+            left, bottom, width, height = 0.7, 0.5, 0.25, 0.2
+            self.plot_table = self.canvas.axes.table(
+                cellText=self.fit_results.reset_index().values,  # data now includes the index
+                colLabels=[''] + self.fit_results.columns.tolist(),  # headers now include the index label
+                loc='upper right',
+                bbox=[left, bottom, width, height]  # these are in figure fraction
+            )
+
+            # Adjust properties of the table if desired
+            self.plot_table.auto_set_font_size(False)
+            self.plot_table.auto_set_column_width(col=list(range(len(self.fit_results.reset_index().columns))))
+            self.plot_table.set_fontsize(10)
+            self.plot_table.scale(1, 1.5)
+
     def fitmodel_plot(self):
         self.statusBar().showMessage("Fitting...   This might take some time")
 
@@ -1738,6 +1836,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.statusBar().showMessage("## One of the models shows an error ##", 10000)
 
         self.fit_vals = self.result.values
+        self.fitmodel_make_table()
+
         # self.add_fitting_pars_to_entryfields()
         self.add_fitting_data_to_gui()
 
@@ -1779,6 +1879,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def convert_to_eV(self):
         if not self.init_data.empty:
+            self.is_ev_data = True
             # set variables
             hc = (4.135667696E-15) * (2.999792E8) * 1E9
             eV_conv = hc / self.yarray
@@ -1794,10 +1895,12 @@ class MainWindow(QtWidgets.QMainWindow):
             self.eV_axis = np.round(hc / axis, 1)
 
             # Rename mdata (this is what is always plotted)
-            self.mod_data = ev_df
+            self.init_data = ev_df.copy()
+            self.create_mod_data()
 
             # Update plot
             self.extract_data_for_axis()
+            # self.canvas.axes.set_xlim([self.eV_axis[0] * 0.9, self.eV_axis[-1] * 1.1])  # Set x-axis range
             self.plot_setup()
             self.bar_update_plots(0)
             # self.scrollbar_action()
@@ -2234,12 +2337,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # First plot
         self._plot_ref, = self.canvas.axes.plot(self.yarray, self.yfirst, 'r', label="Experiment")
+        self.canvas.axes.margins(0.05, 0.05)
+        # self.canvas.axes.set_xlim([self.yarray[0] * 0.9, self.yarray[-1] * 1.1])  # Set x-axis range
         index_name = self.yarray.name
 
         if "0.000" in index_name:
             axis_name = "Wavelength (nm)"
         elif "Wavelength" in index_name:
-            axis_name = index_name + " (nm)"
+            axis_name = index_name
         elif "Energy" in index_name:
             axis_name = index_name + " (eV)"
         elif "TTh" in index_name:
@@ -2255,20 +2360,20 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 self.t_label = "Time"
         else:
-
             self.canvas.axes.set_xlabel(axis_name)
             self.t_label = "Time"
 
         # Set text fields for time and position
-        self.text_time = self.canvas.axes.text(0.4, 0.9, self.t_label + " 0.0",
+        self.text_time = self.canvas.axes.text(0.05, 0.9, self.t_label + " 0.0",
                                                horizontalalignment='left', verticalalignment='center',
                                                transform=self.canvas.axes.transAxes)
-        self.text_pos = self.canvas.axes.text(0.4, 0.83, "Frame 0",
+        self.text_pos = self.canvas.axes.text(0.05, 0.83, "Frame 0",
                                               horizontalalignment='left', verticalalignment='center',
                                               transform=self.canvas.axes.transAxes)
 
         self.canvas.axes.set_ylim([self.min_int * 0.9, self.max_int * 1.1])  # Set y-axis range
         self.canvas.axes.legend(loc="best")  # Position legend smartly
+        self.canvas.axes.set_title(self.sample_name)
 
         # Second plot
         if self.is_giwaxs:
@@ -2279,6 +2384,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._plot_vline, = self.savnac.axes.plot([0, 0], [0, self.ysize], 'r')  # Vertical line (Time select)
         self._plot_hline1, = self.savnac.axes.plot([0, self.xsize], [0, 0], 'b')  # Horizontal line1 (Up boundary)
         self._plot_hline2, = self.savnac.axes.plot([0, self.xsize], [0, 0], 'b')  # Horizontal line2 (Down boundary)
+        self.plot_table = None  # Start table
 
         if self.is_giwaxs:
             #if "eta" in self.gname:
@@ -2298,7 +2404,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Reset ticks to match data
         # Y-axis
-        if "Energy" in axis_name:
+        if self.is_ev_data:
             self.savnac.axes.set_yticks(np.linspace(0, len(self.yarray), 8))
             self.savnac.axes.set_yticklabels(self.eV_axis)
         else:
@@ -2313,6 +2419,39 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.savnac.axes.set_xticklabels(np.around(np.linspace(0, self.xarray[-1], 8), 1))
         except:
             self.savnac.axes.set_xticklabels(np.around(np.linspace(0, len(self.xarray), 8)), 1)
+
+    def plot_crosshairs_on_click(self, event):
+        # Your existing on_click method to draw crosshairs
+
+        if event.inaxes is not self.canvas.figure.gca():
+            return
+
+        x, y = event.xdata, event.ydata
+
+        # Create vertical and horizontal lines (crosshairs)
+        vertical_line = self.canvas.figure.gca().axvline(x=x, color='gray', linestyle='--')
+        horizontal_line = self.canvas.figure.gca().axhline(y=y, color='gray', linestyle='--')
+
+        # Create annotation
+        annotation = self.canvas.figure.gca().annotate(f'({x:.2f}, {y:.2f})', (x, y), textcoords="offset points",
+                                                       xytext=(0, 10), ha='center')
+
+        self.crosshairs.extend([vertical_line, horizontal_line])
+        self.plot_annotations.append(annotation)
+
+        self.canvas.draw()
+
+    def plot_clear_crosshairs(self):
+        # Clear the drawn crosshairs and annotations
+        while self.crosshairs:
+            line = self.crosshairs.pop()
+            line.remove()
+        while self.plot_annotations:
+            annotation = self.plot_annotations.pop()
+            annotation.remove()
+
+        # Redraw the canvas
+        self.canvas.draw()
 
     def rename_plot_axis(self):
         self.dgiw = QDialog()
