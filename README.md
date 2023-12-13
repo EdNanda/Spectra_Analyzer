@@ -1,6 +1,11 @@
 # Spectra Analyzer
 Graphical interface that speeds up the analysis of multiple spectras, whether PL or XRD, that are usually collected during in-situ measurements
 
+If you find this program useful, please cite it DOI: 10.5281/zenodo.10370284
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10370284.svg)](https://doi.org/10.5281/zenodo.10370284)
+
+
 ## Description
 The purpose of this program is to simplify the visualization and analysis of PL or XRD data. 
 It automatically identifies and loads a large variety of data file formats, but includes a "manual" mode in case the displayed data is not what was expected.

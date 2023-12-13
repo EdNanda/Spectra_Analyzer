@@ -1,12 +1,12 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html><head>
+  
+  <meta charset="UTF-8">
+  <title>Spectra Analyzer Manual</title>
 
-
-
-
-<meta charset="UTF-8"><title>Spectra Analyzer Manual</title>
-
-<style>
+  
+  
+  <style>
 .section-title {
 font-size: 1.5em;
 font-weight: bold;
@@ -31,7 +31,9 @@ padding: 10px;
 margin: 20px 0;
 border-left: 5px solid #ccc;
 }
-</style></head><body><br>
+  </style>
+</head><body>
+<br>
 
 <h1 id="jv-characteristics-manual">Spectra Analyzer</h1>
 
@@ -39,32 +41,38 @@ border-left: 5px solid #ccc;
 
 <hr>
 <p>This manual offers detailed instructions for using the Spectra
-  Analyzer, a versatile software designed to expedite the analysis of
-  various types of spectra. This includes, but is not limited to,
-  photoluminescence and X-ray diffraction (XRD) peaks. Our aim is to
-  provide clear, efficient guidance for users to leverage the full
-  capabilities of Spectra Analyzer.</p>
-<p>If you find this program useful, please cite it:&nbsp;</p>
+Analyzer, a versatile software designed to expedite the analysis of
+various types of spectra. This includes, but is not limited to,
+photoluminescence and X-ray diffraction (XRD) peaks. Our aim is to
+provide clear, efficient guidance for users to leverage the full
+capabilities of Spectra Analyzer.</p>
+
+<p>If you find this program useful, please cite it: <a href="https://doi.org/10.5281/zenodo.10370284">DOI:
+10.5281/zenodo.10370284</a></p>
+<p><a href="https://doi.org/10.5281/zenodo.10370284"><br>
+ </a></p>
+
 <h2 id="installation">Installation</h2>
 
 <hr>
 <p>If using python:</p>
 
 <ol>
-<li>
-<p>Clone the latest version of the program from <a href="https://codebase.helmholtz.cloud/hyd/spectra_analyzer">gitlab</a>.
-(For more information follow this comprehensive <a href="https://docs.gitlab.com/ee/user/project/repository/#clone-and-open-in-visual-studio-code">guide</a>).</p>
 
-</li><li>Install
-all the required libraries listed in the&nbsp;<code>requirements.txt</code></li><li>
-<p>Run the <code>main.py</code> file.</p>
-</li>
+  <li>
+    <p>Clone the latest version of the program from <a href="https://codebase.helmholtz.cloud/hyd/spectra_analyzer">gitlab</a>.
+(For more information follow this comprehensive <a href="https://docs.gitlab.com/ee/user/project/repository/#clone-and-open-in-visual-studio-code">guide</a>).</p>
+  </li>
+  <li>Install
+all the required libraries listed in the&nbsp;<code>requirements.txt</code></li>
+  <li>
+    <p>Run the <code>main.py</code> file.</p>
+  </li>
 </ol>
 
 <p>Alternatively, it is possible to directly install the
 application and use an <code>.exe</code> file by following
 the in-screen instructions after opening the installer.</p>
-
 
 <h2 id="getting-started">Getting Started</h2>
 
@@ -79,72 +87,98 @@ significantly enhance the speed of the fitting process.<br>
 <h3 id="program-interface">Program Interface</h3>
 
 <ol start="1">
-<li><big><strong>Graph panels:</strong></big></li>
+
+  <li><big><strong>Graph panels:</strong></big></li>
 </ol>
 
 <p>&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;
 Upon loading your data file, the application will display your dataset
 in two distinct graphs:</p>
 
-
 <ul>
-<li>
-<strong>The upper graph</strong> presents a single
-spectrum corresponding to a specific frame.
-<ul><li>The measurement's time step is indicated in the graph's
-top-left corner. You may alter the frame by sliding the horizontal bar
-located beneath the graph.</li><li>A toolbar above the graph contains several functional
-icons:
-<ul><li>The home icon 🏠 resets the view to its default
-setting.</li><li>The left arrow ← undoes the last change.</li><li>The right arrow → redoes the last undone change.</li><li>The move icon ✥ enables free movement of the plot
-within the graph area.</li><li>The magnifying glass 🔍 zooms in and out of the
-plot.</li><li>The bars icon ≡ adjusts the plot's borders and
-spacing.</li><li>The trend icon 📈 customizes axes and curve
-properties.</li><li>The save icon 💾 saves the current plot view.</li></ul>
-</li><li>Hovering the mouse over the plot will display
-coordinate values.</li><li>Clicking within the plot area will activate crosshairs,
-showing the coordinates of the selected point.</li><li>To remove the crosshairs, click the <code>Clear
-Crosshairs</code>
 
-button located in the setup bar's top-right corner.</li></ul>
-</li><li>
-<strong>The lower graph</strong> displays a heat map of
+  <li> <strong>The upper graph</strong> presents a single
+spectrum corresponding to a specific frame.
+    <ul>
+      <li>The measurement's time step is indicated in the graph's
+top-left corner. You may alter the frame by sliding the horizontal bar
+located beneath the graph.</li>
+      <li>A toolbar above the graph contains several functional
+icons:
+        <ul>
+          <li>The home icon 🏠 resets the view to its default
+setting.</li>
+          <li>The left arrow ← undoes the last change.</li>
+          <li>The right arrow → redoes the last undone change.</li>
+          <li>The move icon ✥ enables free movement of the plot
+within the graph area.</li>
+          <li>The magnifying glass 🔍 zooms in and out of the
+plot.</li>
+          <li>The bars icon ≡ adjusts the plot's borders and
+spacing.</li>
+          <li>The trend icon 📈 customizes axes and curve
+properties.</li>
+          <li>The save icon 💾 saves the current plot view.</li>
+        </ul>
+      </li>
+      <li>Hovering the mouse over the plot will display
+coordinate values.</li>
+      <li>Clicking within the plot area will activate crosshairs,
+showing the coordinates of the selected point.</li>
+      <li>To remove the crosshairs, click the <code>Clear
+Crosshairs</code>
+button located in the setup bar's top-right corner.</li>
+    </ul>
+  </li>
+  <li><strong>The lower graph</strong> displays a heat map of
 the entire dataset.
-<ul><li>The color gradient ranges from yellow for higher values
-to dark purple for lower values.</li><li>A red line on the horizontal bar indicates the data
-currently shown in the upper graph.</li><li>Adjusting the knobs on the vertical bar to the left of
+    <ul>
+      <li>The color gradient ranges from yellow for higher values
+to dark purple for lower values.</li>
+      <li>A red line on the horizontal bar indicates the data
+currently shown in the upper graph.</li>
+      <li>Adjusting the knobs on the vertical bar to the left of
 the heat map lets you select a specific region of interest, potentially
-expediting the fitting process.</li></ul>
-</li>
+expediting the fitting process.</li>
+    </ul>
+  </li>
 </ul>
 
 <ol start="2">
-<li><big><strong>Models section:</strong></big></li>
+
+  <li><big><strong>Models section:</strong></big></li>
 </ol>
 
 <p>&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;
 On the interface's left side, you can configure the fitting models:</p>
 
 <ul>
-<li>The plus <code>+</code> button adds a new
+
+  <li>The plus <code>+</code> button adds a new
 field for inputting a
-fitting model, such as a Gaussian function.</li><li>The minus <code>-</code> button removes the
+fitting model, such as a Gaussian function.</li>
+  <li>The minus <code>-</code> button removes the
 most recently added
-fitting model.</li><li>Ticking the&nbsp;<code>Populate</code>
+fitting model.</li>
+  <li>Ticking the&nbsp;<code>Populate</code>
 checkbox will auto-fill all model
 fields, accelerating the setup since more input data can speed up the
-fitting process.</li><li>The <code>Fit</code> button applies the
+fitting process.</li>
+  <li>The <code>Fit</code> button applies the
 fitting algorithm to the
-curves at the current frame.</li><li>At the bottom, input fields allow you to specify the
-starting and ending frames for the fitting process.</li><li>Clicking the&nbsp;<code>Fit Range</code>
+curves at the current frame.</li>
+  <li>At the bottom, input fields allow you to specify the
+starting and ending frames for the fitting process.</li>
+  <li>Clicking the&nbsp;<code>Fit Range</code>
 button initiates the fitting
 across the selected range of frames.</li>
-<li>The&nbsp;<code>Show results table</code> checkbox reveals a table with
-  fitting parameters for the current single fit.</li><br>
-
-
-<li><span style="font-weight: bold;">List of models:</span><br></li>
-<ul><li>For background features:</li>
+  <li>The&nbsp;<code>Show results table</code> checkbox reveals a table
+with fitting parameters for the current single fit.</li>
+  <br>
+  <li><span style="font-weight: bold;">List of models:</span><br>
+  </li>
+  <ul>
+    <li>For background features:</li>
     <ul>
       <li>Lineal</li>
       <li>Polynomial</li>
@@ -161,191 +195,255 @@ across the selected range of frames.</li>
       <li>Skewed Gaussian<br>
       </li>
     </ul>
-</ul>
+  </ul>
 </ul>
 
 <ol start="3">
-<li><big><strong>Menu bar functions</strong></big></li>
+
+  <li><big><strong>Menu bar functions</strong></big></li>
 </ol>
 
 <ul>
-<li> <strong>File Menu: Data Import and Management</strong>
-<ul><li><strong>Open Single File (One Matrix) (Ctrl + O):</strong>
 
+  <li> <strong>File Menu: Data Import and Management</strong>
+    <ul>
+      <li><strong>Open Single File (One Matrix) (Ctrl + O):</strong>
 Opens any&nbsp;file containing a matrix dataset with extensions
 .xlsx, .txt, or .csv. The file should contain an x-axis column (e.g.,
 measured wavelengths in nanometers) as well as a header for the several
 y-axis columns with measured data. <br>
-<em>Example File:</em> Located under <code>/Data_examples/PL_open_single_file_automatic.txt</code>.</li><li><strong>Open Separated Files (Multiple Arrays)
+        <em>Example File:</em> Located under <code>/Data_examples/PL_open_single_file_automatic.txt</code>.</li>
+      <li><strong>Open Separated Files (Multiple Arrays)
 (Ctrl + U):</strong> Suitable for opening separate files with an
 x-axis column and a single y-axis measured data column. This function
 is helpful when measurements are saved as individual files. You'll be
-prompted to specify the position of the first data pair in the file.
-<br>
-<em>Example File:</em> Found at <code>/Data_examples/PL_open_separated_files_example_2020-12-10_Max_Cu123__000017_000001.dat</code>.
-The first data pair is at row 5.</li><li><strong>Special / GIWAXS: Folder with Log Files
+prompted to specify the position of the first data pair in the file. <br>
+        <em>Example File:</em> Found at <code>/Data_examples/PL_open_separated_files_example_2020-12-10_Max_Cu123__000017_000001.dat</code>.
+The first data pair is at row 5.</li>
+      <li><strong>Special / GIWAXS: Folder with Log Files
 (Ctrl + G):</strong> Designed specifically for BESSY results
 containing log files. Select the folder containing the files, and the
-program will automatically identify and load the datasets.
-<br>
-<em>Example File:</em> Available under <code>/Data_examples/GIWAXS_open_folder_w_log_files/</code>.</li></ul>
-</li>
+program will automatically identify and load the datasets. <br>
+        <em>Example File:</em> Available under <code>/Data_examples/GIWAXS_open_folder_w_log_files/</code>.</li>
+    </ul>
+  </li>
 </ul>
 
 <ul>
-<li><span style="font-weight: bold;">Fit Menu: </span>Tools
+
+  <li><span style="font-weight: bold;">Fit Menu: </span>Tools
 for
-Efficient Fitting Setup
-</li><ul><li><strong>Add Model Line (Ctrl+S):</strong>
+Efficient Fitting Setup </li>
+  <ul>
+    <li><strong>Add Model Line (Ctrl+S):</strong>
 Adds a new model entry line. Note: The application supports up to 15
-models maximum.</li></ul><ul><li><strong>Save Fit Parameters (Ctrl+L):</strong>
+models maximum.</li>
+  </ul>
+  <ul>
+    <li><strong>Save Fit Parameters (Ctrl+L):</strong>
 Saves the number and types of models used, along with their values,
-into a .fit file.</li></ul><ul><li><strong>Load Fit Parameters (Ctrl+A):</strong>
+into a .fit file.</li>
+  </ul>
+  <ul>
+    <li><strong>Load Fit Parameters (Ctrl+A):</strong>
 Loads previously saved .fit files, restoring the fitting conditions
-specified in the file.</li></ul><ul><li><strong>Fit Current Spectra (Ctrl+D):</strong>
+specified in the file.</li>
+  </ul>
+  <ul>
+    <li><strong>Fit Current Spectra (Ctrl+D):</strong>
 Fits the currently displayed frame, showing the resulting curves and
-values on the top graph.</li></ul><ul><li><strong>Fit Selected Range (Ctrl+Alt+F):</strong>
+values on the top graph.</li>
+  </ul>
+  <ul>
+    <li><strong>Fit Selected Range (Ctrl+Alt+F):</strong>
 Fits all curves within the specified range. Outputs include an Excel
 file with fitting parameters for all models and r-squared values, along
 with preview plots to visualize changes in r-square, center, sigma, and
-amplitude of the curves.</li></ul>
+amplitude of the curves.</li>
+  </ul>
 </ul>
 
 <ul>
 
-<li><span style="font-weight: bold;">Modify Menu: </span>Tools
+  <li><span style="font-weight: bold;">Modify Menu: </span>Tools
 to Adjust Curves and Plot Settings<strong></strong></li>
   <ul>
     <li><strong>Convert to Energy (eV):</strong>
 Converts wavelength data from nanometers to energy units (eV), crucial
 for photoluminescence analysis.</li>
-<li><strong>Subtract Background:</strong> Removes
+    <li><strong>Subtract Background:</strong> Removes
 background signals. A popup allows you to choose the background's start
 position and range for mean calculation. "Subtract" finalizes the
-operation, while "Cancel" discards changes.</li><li><strong>Rename Plot Axis:</strong> Customizes
+operation, while "Cancel" discards changes.</li>
+    <li><strong>Rename Plot Axis:</strong> Customizes
 axis names to suit different data files, enhancing manual axis
-identification.</li><li><strong>Set Heatplot Color Range:</strong>
-Adjusts color ranges in the heatplot for better feature visibility.</li><li><strong>Clean Dead Pixel (831 nm):</strong>
+identification.</li>
+    <li><strong>Set Heatplot Color Range:</strong>
+Adjusts color ranges in the heatplot for better feature visibility.</li>
+    <li><strong>Clean Dead Pixel (831 nm):</strong>
 [Legacy Feature] Removes artifacts caused by a dead pixel at 831 nm on
 a damaged spectrometer by averaging values from adjacent pixels.</li>
   </ul>
 </ul>
 
-
 <ul>
 
 </ul>
 
 <ul>
 
-<li><span style="font-weight: bold;">Export Menu: </span>Tools
-for Data and Image Export
-
-</li><ul><li><strong>Save Fitting Curves Only (Snapshot):</strong>
+  <li><span style="font-weight: bold;">Export Menu: </span>Tools
+for Data and Image Export </li>
+  <ul>
+    <li><strong>Save Fitting Curves Only (Snapshot):</strong>
 Exports xy data of curves from the top graph, including both raw and
-fitted datasets, for use in external graphing software like Origin.</li><li><strong>Save Modified Matrix Dataset:</strong>
+fitted datasets, for use in external graphing software like Origin.</li>
+    <li><strong>Save Modified Matrix Dataset:</strong>
 Saves an Excel file of the currently modified matrix data, such as data
 with subtracted background, to avoid repetitive processing in the
-future.</li><li><strong>Save Unmodified Matrix Dataset:</strong>
-
+future.</li>
+    <li><strong>Save Unmodified Matrix Dataset:</strong>
 Creates an Excel file of the original matrix data as loaded, useful for
-archiving datasets constructed from individual measurements.</li><li><strong>Save Heatplot as PNG:</strong>
+archiving datasets constructed from individual measurements.</li>
+    <li><strong>Save Heatplot as PNG:</strong>
 Captures
-and saves the current view of the heatplot as a PNG image.</li></ul>
+and saves the current view of the heatplot as a PNG image.</li>
+  </ul>
 </ul>
+
 <ul>
-  <li><span style="font-weight: bold;">Special Menu:</span> Special tools for specific purposes.<br>
+
+  <li><span style="font-weight: bold;">Special Menu:</span> Special
+tools for specific purposes.<br>
   </li>
   <ul>
-    <li><span style="font-weight: bold;">Animation maker: </span>A tool to create GIF animations from fitted parameters. A detailed guide is available within the popup interface.</li>
+    <li><span style="font-weight: bold;">Animation maker: </span>A
+tool to create GIF animations from fitted parameters. A detailed guide
+is available within the popup interface.</li>
   </ul>
   <ul>
-<br>
+    <br>
   </ul>
-
 </ul>
-
-
 
 <h2>Fitting Process Walk-Through</h2>
 
-
 <hr>
 <ul>
-<p>This section provides a step-by-step guide for a standard
+
+  <p>This section provides a step-by-step guide for a standard
 fitting routine using the dataset available at <code>Data_examples/PL_open_single_file_automatic.txt</code>.</p>
 </ul>
 
 <ol>
-<li><strong>Load the File:</strong> Navigate to the
+
+  <li><strong>Load the File:</strong> Navigate to the
 'File' menu, select 'Open Single File (One Matrix)', locate your file,
-and click 'Open'.</li><li><strong>Visualize Data:</strong> Use the
+and click 'Open'.</li>
+  <li><strong>Visualize Data:</strong> Use the
 horizontal scrollbar to explore the dataset. For example, the
-signal's peak on this dataset starts at frame 94.</li><li><span style="font-weight: bold;">Convert values to eV (Optional):</span> Recommended for PL measurements. Press 'Modify' and 'Convert&nbsp;to Energy (eV)'.</li><li><strong>Subtract Background (Optional) </strong><strong>:</strong>
+signal's peak on this dataset starts at frame 94.</li>
+  <li><span style="font-weight: bold;">Convert values to eV (Optional):</span>
+Recommended for PL measurements. Press 'Modify' and 'Convert&nbsp;to
+Energy (eV)'.</li>
+  <li><strong>Subtract Background (Optional) </strong><strong>:</strong>
 This is not necessary for datasets with&nbsp;baselines at zero. Go to
-'Modify' - 'Subtract background'. In the popup, select the frame where the
-background data starts and how many curves should be averaged for the subtraction. Click
+'Modify' - 'Subtract background'. In the popup, select the frame where
+the
+background data starts and how many curves should be averaged for the
+subtraction. Click
 'Subtract', then 'Apply'. Default settings are usually sufficient for
-this example.</li><li><strong>Set Up the Models:</strong>
-
-<ol><li>Identify frames that display mid-intensity values, e.g., between frames 119 and 610+. Frame 240 is a good starting point
-for this example.</li><li>Use the '+' button to add models for each
+this example.</li>
+  <li><strong>Set Up the Models:</strong>
+    <ol>
+      <li>Identify frames that display mid-intensity values, e.g.,
+between frames 119 and 610+. Frame 240 is a good starting point
+for this example.</li>
+      <li>Use the '+' button to add models for each
 peak.&nbsp;This dataset requires two&nbsp;models due to the
-asymmetrical peak.</li><li>Select 'Gaussian' from the dropdown for each model.</li><li>Optionally, assign names to the peaks.</li><li>Determine the peak position (around 2.3 eV in this
-example) using the mouse hover or crosshairs tool.</li><li>Enter distinct center values for the Gaussian peaks
-(e.g., 2.2 and 2.4 eV).</li><li>Click the 'Fit' button. Initially, you might see only
+asymmetrical peak.</li>
+      <li>Select 'Gaussian' from the dropdown for each model.</li>
+      <li>Optionally, assign names to the peaks.</li>
+      <li>Determine the peak position (around 2.3 eV in this
+example) using the mouse hover or crosshairs tool.</li>
+      <li>Enter distinct center values for the Gaussian peaks
+(e.g., 2.2 and 2.4 eV).</li>
+      <li>Click the 'Fit' button. Initially, you might see only
 one fitted Gaussian&nbsp; Use this as a reference to adjust the
-fitting parameters values like sigma (~0.05) and amplitude (approximately half
-of the fitted curve, ~150,000).</li><li>Fit again and check the fitting quality. A good fit
-will have an R² value close to 1.</li><li>Once you have a satisfactory fit, check the 'Populate'
-button so that all the parameter fields are full.</li></ol>
-
-
-</li><li><strong>Select the Fitting Range:</strong> Set this on the bottom-left of the window. For
-this example, starting at frame&nbsp;94 and ending at 580 should give good
-results. (Before&nbsp;94, there is nothing to fit, which would result in
+fitting parameters values like sigma (~0.05) and amplitude
+(approximately half
+of the fitted curve, ~150,000).</li>
+      <li>Fit again and check the fitting quality. A good fit
+will have an R² value close to 1.</li>
+      <li>Once you have a satisfactory fit, check the 'Populate'
+button so that all the parameter fields are full.</li>
+    </ol>
+  </li>
+  <li><strong>Select the Fitting Range:</strong> Set this on the
+bottom-left of the window. For
+this example, starting at frame&nbsp;94 and ending at 580 should give
+good
+results. (Before&nbsp;94, there is nothing to fit, which would result
+in
 noisy results. After frame 580, results don't change much and the
-fitting process would take considerably longer.)</li><li><strong>Execute 'Fit range':</strong>&nbsp;This
+fitting process would take considerably longer.)</li>
+  <li><strong>Execute 'Fit range':</strong>&nbsp;This
 process utilizes as many logical processors on the computer as possible
-and can be monitored in the status message bar at the bottom-left.</li><li><strong>Review Results:</strong> Find the
-fitting results in the 'Fitting' folder. It will contain an Excel file with
+and can be monitored in the status message bar at the bottom-left.</li>
+  <li><strong>Review Results:</strong> Find the
+fitting results in the 'Fitting' folder. It will contain an Excel file
+with
 all parameters and preview images for the r-squared, center, sigma and
 amplitude values.</li>
 </ol>
-
 
 <h2>Other Tips and Tricks</h2>
 
 <hr>
 <ul>
-<li>The 'Amplitude' parameter refers to the area under the
+
+  <li>The 'Amplitude' parameter refers to the area under the
 curve, not its height, due to the nomenclature used in the python
-library.</li><li>For efficiency, subtract the background from curves instead
-of using background models like Linear, Polynomial, or Exponential.</li><li>Precise initial values in the parameter fitting fields can
-significantly speed up the fitting process.</li><li>When dealing with multiple peaks (as in GIWAXS measurements),
+library.</li>
+  <li>For efficiency, subtract the background from curves instead
+of using background models like Linear, Polynomial, or Exponential.</li>
+  <li>Precise initial values in the parameter fitting fields can
+significantly speed up the fitting process.</li>
+  <li>When dealing with multiple peaks (as in GIWAXS measurements),
 consider isolating and/or fitting&nbsp;smaller groups of peaks for
-more accurate results.</li><li>Avoid setting initial fitting parameters at frames with
-extreme intensity levels.</li><li>If the fitting process exceeds half an hour with null
+more accurate results.</li>
+  <li>Avoid setting initial fitting parameters at frames with
+extreme intensity levels.</li>
+  <li>If the fitting process exceeds half an hour with null
 progress, it's advisable
-to stop and restart the process with different starting values, or fewer peaks.</li><li>The progam loads TXT of CSV files considerably faster than XLSX files.</li>
+to stop and restart the process with different starting values, or
+fewer peaks.</li>
+  <li>The progam loads TXT of CSV files considerably faster than XLSX
+files.</li>
 </ul>
 
 <h2 id="troubleshooting">Troubleshooting</h2>
 
 <hr>
 <ul>
-<li>At this point, there are no consistent errors to notice.</li><li>The fitting process is done with the python library<span style="font-style: italic;"> lmfit</span>. For more information on the fitting process details and models, please look at the <a href="https://lmfit.github.io/lmfit-py/builtin_models.html">documentation</a>.<br></li>
+
+  <li>At this point, there are no consistent errors to notice.</li>
+  <li>The fitting process is done with the python library<span style="font-style: italic;"> lmfit</span>. For more information on the
+fitting process details and models, please look at the <a href="https://lmfit.github.io/lmfit-py/builtin_models.html">documentation</a>.<br>
+  </li>
 </ul>
 
 <h2 id="contact">Contact</h2>
 
-
 <hr>
-The program was developed by Edgar R. Nandayapa for the Helmholtz-Zentrum 
-Berlin. <br>
-This guide, prepared in December 2023, corresponds to Version 
-1.3 of the software.<ul>
-  <li>For further assistance or to report issues, contact by <a href="enandayapa@gmail.com">email</a> or <a href="https://codebase.helmholtz.cloud/hyd/spectra_analyzer">gitlab</a>.</li>
+The program was developed by Edgar R. Nandayapa for the
+Helmholtz-Zentrum Berlin. <br>
 
+This guide, prepared in December 2023, corresponds to Version 1.3 of
+the software.
+<ul>
+
+  <li>For further assistance or to report issues, contact by <a href="enandayapa@gmail.com">email</a> or <a href="https://codebase.helmholtz.cloud/hyd/spectra_analyzer">gitlab</a>.</li>
 </ul>
+
 </body></html>
