@@ -1,18 +1,16 @@
 __author__ = "Edgar R. Nandayapa"
-__version__ = "1.2 (2023)"
+__version__ = "1.3 (2023)"
 
 import sys
 import os
 import re
 import csv
 import traceback
-import markdown
 import pandas as pd
 import numpy as np
 import matplotlib
 matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
-import openpyxl
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from collections import OrderedDict
@@ -21,10 +19,9 @@ from PyQt5.QtWidgets import QGridLayout, QVBoxLayout, QHBoxLayout, QSpacerItem, 
 from PyQt5.QtWidgets import QScrollBar, QToolButton, QLabel, QComboBox, QLineEdit, QTextBrowser, QPushButton
 from PyQt5.QtWidgets import QDialog, QFormLayout, QDialogButtonBox, QAction, QCheckBox, QMessageBox
 from PyQt5.QtCore import Qt, QObject, pyqtSignal, QRunnable, pyqtSlot, QThreadPool
-from PyQt5.QtGui import QFont, QIcon, QIntValidator
+from PyQt5.QtGui import QIcon, QIntValidator
 from qtrangeslider import QRangeSlider
 from qtrangeslider .qtcompat import QtCore
-#from QtRangeSlider .qtcompat import QtWidgets as QtW
 from lmfit.models import Model, LinearModel, PolynomialModel
 from lmfit.models import ExponentialModel, GaussianModel, LorentzianModel, VoigtModel
 from lmfit.models import PseudoVoigtModel, ExponentialGaussianModel, SkewedGaussianModel, SkewedVoigtModel
@@ -72,7 +69,7 @@ class Worker(QRunnable):
             self.signals.finished.emit()  # Done
 
 
-class MplCanvas_heatplot(FigureCanvasQTAgg):
+class MplCanvasHeatplot(FigureCanvasQTAgg):
     def __init__(self, parent=None, width=5, height=4, dpi=100, title=""):
         self.figh = Figure(figsize=(width, height), dpi=dpi)
         self.axes = self.figh.add_subplot(111)
@@ -80,7 +77,7 @@ class MplCanvas_heatplot(FigureCanvasQTAgg):
         self.axes.set_ylabel('Wavelength (nm)')
         self.axes.set_title(title)
 
-        super(MplCanvas_heatplot, self).__init__(self.figh)
+        super(MplCanvasHeatplot, self).__init__(self.figh)
 
     def update_title(self, new_title):
         self.axes.set_title(new_title)
@@ -148,25 +145,19 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def GUI_menubar_setup(self):
         mainMenu = self.menuBar()
-        self.infoMenu = QAction("&About", self)
+        self.infoMenu = QAction("&Guide", self)
 
         file_PL_options = [
             {"name": "Open single file (One &matrix)", "shortcut": "Ctrl+O", "callback": self.menu_load_single_matrix},
             {"name": "Open separated files (Multiple &arrays)", "shortcut": "Ctrl+U", "callback": self.menu_load_PL_folder},
         ]
         file_XRD_options = [
-            #{"name": "Open single file (&Manual)", "shortcut": "Ctrl+M", "callback": self.menu_load_single_manual},
             {"name": "&GIWAXS: folder w/ Log files", "shortcut": "Ctrl+G", "callback": self.menu_load_giwaxs_w_log},
-            #{"name": "Open folder (Multiple f&iles)", "shortcut": "", "callback": self.menu_load_xrd_separated},
 
         ]
         fileMenu = mainMenu.addMenu("&File")
-        # a = fileMenu.addAction("Photoluminescence")
-        # a.setDisabled(True)
         self.GUI_menu_builder(file_PL_options, fileMenu)
         fileMenu.addSeparator()
-        # b = fileMenu.addAction("GIWAXS")
-        # b.setDisabled(True)
         special = fileMenu.addMenu("&Special")
         self.GUI_menu_builder(file_XRD_options, special)
 
@@ -296,7 +287,7 @@ class MainWindow(QtWidgets.QMainWindow):
         Lfit.addItem(Lend)
         # Create the maptlotlib FigureCanvas object
         self.canvas = MplCanvas(self)
-        self.savnac = MplCanvas_heatplot(self)
+        self.savnac = MplCanvasHeatplot(self)
 
         self.threadpool = QThreadPool.globalInstance()
 
@@ -355,9 +346,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.range_slider.valueChanged.connect(self.slider_action)
         self.Badd.pressed.connect(self.model_row_add)
         self.Bsubtract.pressed.connect(self.model_row_remove)
-        self.infoMenu.triggered.connect(self.popup_info)
+        self.infoMenu.triggered.connect(self.popup_general_guide)
         self.canvas.mpl_connect('button_press_event', self.plot_crosshairs_on_click)
-        # self.Btest.pressed.connect(self.clean_dead_pixel)
 
     def menu_load_single_matrix(self):
         self.select_file()
@@ -395,16 +385,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.menu_load_successful()
         else:
             self.statusBar().showMessage(msg, 5000)
-        # self.select_folder()
-        # self.is_giwaxs = False
-        # if self.is_file_selected:
-        #     self.reset_mod_init_data()
-        #     self.pl_folder_gather_data()
-        #     self.create_mod_data()
-        #     self.extract_data_for_axis()
-        #     self.menu_load_successful()
-        # else:
-        #     self.statusBar().showMessage("Folder not selected", 5000)
 
     def menu_load_giwaxs_w_log(self):
         self.is_giwaxs = True
@@ -439,11 +419,6 @@ class MainWindow(QtWidgets.QMainWindow):
     def save_matrix_unmodified(self):
         variable = "initial"
         self.save_dataframe_to_file(variable)
-        # if not self.init_data.empty:
-        #     # fi, le = self.dummy_folderpath_file.rsplit("/", 1)
-        #     self.init_data.to_excel(self.folder_path + "/0_collected_" + self.sample_name + ".xlsx")
-        # else:
-        #     self.statusBar().showMessage("Data file has not been selected yet!", 5000)
 
     def clean_dead_pixel(self):
         if not self.init_data.empty:
@@ -800,9 +775,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.statusBar().showMessage("Loading files, please be patient...")
         pl_files = sorted(glob(self.folder_path + "*.dat"))
 
-        # self.dummy_folderpath_file = self.folder_path + self.sample_name
-
-        # List to store all dataframes
         dataframes = []
 
         for counter, file in enumerate(pl_files):
@@ -866,7 +838,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         for counter, sf in enumerate(separated_files):
             try:
-                data = pd.read_csv(sf, delimiter=sym, skiprows=skpr, header=None,# names=["index", counter],
+                data = pd.read_csv(sf, delimiter=sym, skiprows=skpr, header=None,
                                    index_col=False)
                 data = data.dropna(how='all', axis=1)
             except:
@@ -896,11 +868,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def pl_folder_gather_data(self):
         pl_files = sorted(glob(self.folder_path + "\\*.txt"), key=os.path.getmtime)
-
-        # self.dummy_folderpath_file = self.folder_path + "/" + self.folder_path.split("/")[-1]
-        # self.file_path = self.folder_path + self.sample_name
-        # fi = self.folder_path
-        # le = self.sample_name
 
         for counter, file in enumerate(pl_files):
             data = pd.read_csv(file, delimiter="\t", skiprows=14, header=None, names=["Wavelength", counter],
@@ -994,7 +961,6 @@ class MainWindow(QtWidgets.QMainWindow):
                     data.Time = data.Time + t
 
                     combined = pd.concat([combined, data])
-            # print(combined)
             self.separated.append(data)
         combined = combined.reset_index(drop=True)
 
@@ -1012,7 +978,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.init_data = self.init_data.join(raw_dat.set_index("TTh"), on="TTh")
 
         self.init_data = self.init_data.set_index("TTh")
-        # print(self.mdata)
 
         if "eta" in log_file:
             self.init_data.columns = [combined.eta, combined.DegC]
@@ -1040,49 +1005,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.range_slider.setMaximum(self.ysize)
         self.range_slider.setValue((0, self.ysize))
         self.set_default_fitting_range()
-
-    def popup_info(self):
-        dinf = QDialog()
-        Ltext = QVBoxLayout()
-
-        Tlibra = QLabel("Fitting is done using \nthe python library \"lmfit\"")
-        Tlibra.setAlignment(Qt.AlignCenter)
-        Tlibra.setFont(QFont('Arial', 12))
-
-        Tmodel = QLabel("More information about the models can be found at")
-        Tmodel.setAlignment(Qt.AlignCenter)
-        Tmodel.setFont(QFont('Arial', 12))
-        Tmodel.setOpenExternalLinks(True)
-
-        urlLink = "<a href=\"https://lmfit.github.io/lmfit-py/builtin_models.html\">lmfit.github.io</a>"
-        Tlink = QLabel()
-        Tlink.setOpenExternalLinks(True)
-        Tlink.setText(urlLink)
-        Tlink.setAlignment(Qt.AlignCenter)
-        Tlink.setFont(QFont('Arial', 12))
-
-        Tempty = QLabel("")
-        Tversion = QLabel("Current version: " + __version__)
-        Tversion.setAlignment(Qt.AlignCenter)
-        Tversion.setFont(QFont('Arial', 12))
-
-        Tauthor = QLabel("Program created by Edgar Nandayapa (2021)\nHelmholtz-Zentrum Berlin")
-        Tauthor.setAlignment(Qt.AlignCenter)
-        Tauthor.setFont(QFont('Arial', 8))
-
-        Ltext.addWidget(Tlibra)
-        Ltext.addWidget(Tempty)
-        Ltext.addWidget(Tmodel)
-        Ltext.addWidget(Tlink)
-        Ltext.addWidget(Tempty)
-        Ltext.addWidget(Tversion)
-        Ltext.addWidget(Tempty)
-        Ltext.addWidget(Tauthor)
-
-        dinf.setLayout(Ltext)
-        dinf.setWindowTitle("About")
-        dinf.setWindowModality(Qt.ApplicationModal)
-        dinf.exec_()
 
     def popup_read_file(self):
         # Optimize the building of this popup
@@ -1245,9 +1167,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.success = False
         h = int(self.headers.text())
         l = self.delimit.text()
-        # dc = self.decimal.text()
         rem = self.remove.text().split(",")
-        # cleanf = self.clean.
         remove = False
         if "None" not in rem:
             rem = [int(r) - 1 for r in rem]
@@ -1312,9 +1232,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.LGfit.addWidget(QLabel("  fix\ncenter"), 0, 9)
                 self.LGfit.addWidget(QLabel("  neg."), 0, 10)
 
-            # self.LGfit.addWidget(comboNumber, ii + 1, 0)
-            # self.LGfit.addWidget(comboName, ii + 1, 1)
-            # self.LGfit.addWidget(combobox, ii + 1, 2)
             self.LGfit.addWidget(comboNumber, ii * 2 + 1, 0)
             self.LGfit.addWidget(comboName, ii * 2 + 1, 1)
             self.LGfit.addWidget(combobox, ii * 2 + 1, 2)
@@ -2032,34 +1949,44 @@ class MainWindow(QtWidgets.QMainWindow):
         self.dani.setWindowModality(Qt.ApplicationModal)
         self.dani.exec_()
 
-    def popup_ani_guide(self):
-        html = ""
-        md_path = "../resources/animation_guide.md"
-        if os.path.exists(md_path):
-            with open(md_path, 'r', encoding='utf-8') as file:
-                md_content = file.read()
-                html = markdown.markdown(md_content)
-
+    def popup_general_guide(self):
         dialog = QDialog(self)
-        dialog.setWindowTitle('Animation Guide')
-        dialog.setGeometry(150, 150, 800, 600)
+        dialog.setWindowTitle("Information")
+        dialog.setGeometry(100, 100, 900, 1000)
+
         layout = QVBoxLayout(dialog)
 
-        # QTextBrowser setup
-        browser = QTextBrowser(dialog)
+        textBrowser = QTextBrowser(dialog)
+        layout.addWidget(textBrowser)
 
-        browser.setHtml(html)
+        html_file_path = "../resources/Manual_general.html"  # Update the file path to your HTML file
+        if os.path.exists(html_file_path):
+            with open(html_file_path, 'r', encoding='utf-8') as file:  # Ensure UTF-8 encoding is used
+                html_content = file.read()
+                textBrowser.setHtml(html_content)
+        else:
+            textBrowser.setPlainText("HTML file not found.")
 
-        # Close button setup
-        close_button = QPushButton("Close", dialog)
-        close_button.clicked.connect(dialog.close)
+        dialog.exec_()
 
-        # Add widgets to layout and set QDialog layout
-        layout.addWidget(browser)
-        layout.addWidget(close_button)
-        dialog.setLayout(layout)
+    def popup_ani_guide(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Animation maker")
+        dialog.setGeometry(100, 100, 600, 800)
 
-        # Show QDialog
+        layout = QVBoxLayout(dialog)
+
+        textBrowser = QTextBrowser(dialog)
+        layout.addWidget(textBrowser)
+
+        html_file_path = "../resources/Manual_animation.html"  # Update the file path to your HTML file
+        if os.path.exists(html_file_path):
+            with open(html_file_path, 'r', encoding='utf-8') as file:  # Ensure UTF-8 encoding is used
+                html_content = file.read()
+                textBrowser.setHtml(html_content)
+        else:
+            textBrowser.setPlainText("HTML file not found.")
+
         dialog.exec_()
 
     def popup_ani_start(self):
@@ -2068,7 +1995,6 @@ class MainWindow(QtWidgets.QMainWindow):
         bool_list = []
         for cc, chbx in enumerate(self.ani_checkbox):
             bool_list.append(chbx.isChecked())
-            # if chbx.isChecked():
             model_list.append(self.ani_dropdown[cc].currentText())
             names_list.append(self.ani_names[cc].text())
 
@@ -2139,7 +2065,6 @@ class MainWindow(QtWidgets.QMainWindow):
     def popup_ani_fit(self, ongoing=False):
         # Reset grid layout
         for i in reversed(range(self.grid_curves.count())):
-            # self.grid_curves.itemAt(i).widget().deleteLater()
             self.grid_curves.itemAt(i).widget().setParent(None)
         # Read path
         is_file = False
@@ -2184,12 +2109,8 @@ class MainWindow(QtWidgets.QMainWindow):
                     given_names.append(ke.rsplit("_", 1)[0])
                 else:
                     pass
-            # print(given_names)
 
             spaces = max(len(given_names), peak_counter)
-            # print(peak_counter, spaces)
-
-            # data_rows = self.ani_fit_data.shape[0]
             self.field_start.setText(str(self.ani_fit_data.index[0]))
             self.field_end.setText(str(self.ani_fit_data.index[-1]))
 
@@ -2338,7 +2259,6 @@ class MainWindow(QtWidgets.QMainWindow):
         # First plot
         self._plot_ref, = self.canvas.axes.plot(self.yarray, self.yfirst, 'r', label="Experiment")
         self.canvas.axes.margins(0.05, 0.05)
-        # self.canvas.axes.set_xlim([self.yarray[0] * 0.9, self.yarray[-1] * 1.1])  # Set x-axis range
         index_name = self.yarray.name
 
         if "0.000" in index_name:
@@ -2513,29 +2433,6 @@ class MainWindow(QtWidgets.QMainWindow):
             number = int(number)
 
         return number
-    # Allow to keep center fixed (with checkbox)
-    # def add_fitting_pars_to_entryfields(self):
-    #     x_arr = [4, 6, 8]  # usable grid coordinates
-    #     fit_vals = self.fit_vals
-    #     parameters = fit_vals.keys()
-    #
-    #     for mc, list_name in enumerate(self.model_combobox):
-    #         list_name = list_name[1]
-    #
-    #         if list_name.currentText() == "":
-    #             pass
-    #         elif list_name.currentText() == "Polynomial":
-    #             # read polynomial number
-    #             pass
-    #         elif list_name.currentText() == "Linear":
-    #             variables = ["slope", "intercept"]
-    #             self.add_fitting_pars_process(parameters, variables, list_name, fit_vals)
-    #         elif list_name.currentText() == "Exponential":
-    #             variables = ["amplitude", "decay"]
-    #             self.add_fitting_pars_process(parameters, variables, list_name, fit_vals)
-    #         else:
-    #             variables = ["amplitude", "center", "sigma"]
-    #             self.add_fitting_pars_process(parameters, variables, list_name, fit_vals)
 
     def add_fitting_pars_process(self,parameters, variables, list_name, fit_vals):
         for pars in parameters:
@@ -2544,43 +2441,15 @@ class MainWindow(QtWidgets.QMainWindow):
                     if va in pars:
                         print(pars, fit_vals[pars])
 
-        # test = []
-        # for p in parameters: # Get list of models using the assigned name
-        #     test.append(p.rsplit("_",1)[0])
-        # print(set(test))
-
-        # with open(filename[0], "r") as fd:
-        #     reader = csv.reader(fd, delimiter="\t")
-
-        #
-        # for cr, row in enumerate(reader):
-        #     if len(row) > 1:
-        #         self.grid_count += 1
-        #         for ce, ele in enumerate(row[:-1]):
-        #             field = self.LGfit.itemAtPosition(cr + 1, x_arr[ce])
-        #             try:
-        #                 fieldwid = field.widget()
-        #                 try:
-        #                     fieldwid.setText(ele)
-        #                 except:
-        #                     fieldwid.setCurrentText(ele)
-        #             except:
-        #                 pass
-
-
-
     def add_fitting_data_to_gui(self):
         fv = self.fit_vals
         ke = fv.keys()
-        # print(ke)
-
         row = 1
         cou = 1
         col = 0
         extra = 0
         for cc, key in enumerate(ke):
             model_name = self.model_combobox[row - 1][1].currentText()
-
             # This part sets the lenght of parameters and the number of skipped ones
             if model_name == "":
                 mod = 1
