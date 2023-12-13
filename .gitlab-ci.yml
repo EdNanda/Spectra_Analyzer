@@ -1,0 +1,21 @@
+stages:
+  - build
+
+build_windows_package:
+  stage: build
+  image: hcr.helmholtz.cloud/examples/container-examples/wincompiler:python3.11
+    
+  tags:
+    - windows
+    
+  script:
+    - bash
+    - pip install --upgrade pip
+    - pip install --upgrade pyinstaller
+    - pip install --requirement requirements.txt
+    - pyinstaller --icon resources/graph.ico --onefile spectra_analyzer/SpectraAnalyzer.py --name spectra-analyzer
+    
+  artifacts:
+    paths:
+      - build/
+      - dist/
