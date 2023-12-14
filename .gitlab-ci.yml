@@ -13,7 +13,7 @@ build_windows_package:
     - pip install --upgrade pip
     - pip install --upgrade pyinstaller
     - pip install --requirement requirements.txt
-    - pyinstaller --icon .\resources\graph.ico --onefile .\spectra_analyzer\SpectraAnalyzer.py --add-data ".\resources\animation_maker.py;.\resources" --add-data ".\resources\Manual_general.html;.\resources" --name SpectraAnalyzer
+    - pyinstaller --icon .\resources\graph.ico --onefile .\spectra_analyzer\SpectraAnalyzer.py --add-data ".\resources\animation_maker.py;.\resources" --add-data ".\resources\Manual_general.html;.\resources" --add-data ".\resources\Manual_animation.html;.\resources" --name SpectraAnalyzer
 
     
   artifacts:
