@@ -3,6 +3,7 @@ __version__ = "1.3 (2023)"
 
 import sys
 import os
+import os.path
 import re
 import csv
 import traceback
@@ -31,12 +32,23 @@ from datetime import datetime
 from glob import glob
 from functools import partial
 from matplotlib import rcParams
-sys.path.append("../resources/")
+
+if getattr(sys, 'frozen', False):
+    EXE_LOCATION = os.path.dirname(sys.executable)  # cx_Freeze frozen
+else:
+    EXE_LOCATION = os.path.dirname(os.path.realpath(__file__))  # Other packers
+
+# sys.path.append("../resources/")
+sys.path.append(os.path.join(EXE_LOCATION, "..", "resources"))
 from resources.animation_maker import VideoMaker
 
 rcParams.update({'figure.autolayout': True})
 cmaps = OrderedDict()
 
+if getattr(sys, 'frozen', False):
+    EXE_LOCATION = os.path.dirname( sys.executable ) # cx_Freeze frozen
+else:
+    EXE_LOCATION = os.path.dirname( os.path.realpath( __file__ ) ) # Other packers
 
 class WorkerSignals(QObject):
     finished = pyqtSignal()
@@ -215,8 +227,8 @@ class MainWindow(QtWidgets.QMainWindow):
         Lmain = QHBoxLayout()
 
         self.setWindowTitle("Spectra Analyzer")
-        self.setWindowIcon(QIcon("../resources/graph.ico"))
-
+        # self.setWindowIcon(QIcon("../resources/graph.ico"))
+        self.setWindowIcon(QIcon(os.path.join(EXE_LOCATION, "..", "resources", "graph.ico")))
         self.L1fit = QHBoxLayout()
         self.LGfit = QGridLayout()
         self.Badd = QToolButton()
@@ -1960,7 +1972,8 @@ class MainWindow(QtWidgets.QMainWindow):
         textBrowser = QTextBrowser(dialog)
         layout.addWidget(textBrowser)
 
-        html_file_path = "../resources/Manual_general.html"  # Update the file path to your HTML file
+        # html_file_path = "../resources/Manual_general.html"  # Update the file path to your HTML file
+        html_file_path = os.path.join(EXE_LOCATION, "..", "resources", "Manual_general.html")
         if os.path.exists(html_file_path):
             with open(html_file_path, 'r', encoding='utf-8') as file:  # Ensure UTF-8 encoding is used
                 html_content = file.read()
@@ -1980,7 +1993,8 @@ class MainWindow(QtWidgets.QMainWindow):
         textBrowser = QTextBrowser(dialog)
         layout.addWidget(textBrowser)
 
-        html_file_path = "../resources/Manual_animation.html"  # Update the file path to your HTML file
+        # html_file_path = "../resources/Manual_animation.html"  # Update the file path to your HTML file
+        html_file_path = os.path.join(EXE_LOCATION, "..", "resources", "Manual_animation.html")
         if os.path.exists(html_file_path):
             with open(html_file_path, 'r', encoding='utf-8') as file:  # Ensure UTF-8 encoding is used
                 html_content = file.read()
