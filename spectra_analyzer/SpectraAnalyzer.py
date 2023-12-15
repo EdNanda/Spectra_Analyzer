@@ -38,17 +38,12 @@ if getattr(sys, 'frozen', False):
 else:
     EXE_LOCATION = os.path.dirname(os.path.realpath(__file__))  # Other packers
 
-# sys.path.append("../resources/")
 sys.path.append(os.path.join(EXE_LOCATION, "..", "resources"))
 from resources.animation_maker import VideoMaker
 
 rcParams.update({'figure.autolayout': True})
 cmaps = OrderedDict()
 
-if getattr(sys, 'frozen', False):
-    EXE_LOCATION = os.path.dirname( sys.executable ) # cx_Freeze frozen
-else:
-    EXE_LOCATION = os.path.dirname( os.path.realpath( __file__ ) ) # Other packers
 
 class WorkerSignals(QObject):
     finished = pyqtSignal()
