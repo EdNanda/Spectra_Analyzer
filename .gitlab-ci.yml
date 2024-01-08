@@ -1,5 +1,5 @@
-#stages:
-#  - build
+stages:
+  - build
 
 #build_windows_package:
 #  stage: build
