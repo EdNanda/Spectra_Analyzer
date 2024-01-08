@@ -1,31 +1,31 @@
-stages:
-  - build
+#stages:
+#  - build
 
-build_windows_package:
-  stage: build
-  image: hcr.helmholtz.cloud/examples/container-examples/wincompiler:python3.11
+#build_windows_package:
+#  stage: build
+#  image: hcr.helmholtz.cloud/examples/container-examples/wincompiler:python3.11
     
-  tags:
-    - windows
+#  tags:
+#    - windows
     
-  script:
-    - bash
-    - pip install --upgrade pip
-    - pip install --upgrade pyinstaller
-    - pip install --requirement requirements.txt
-    - pyinstaller -w --icon .\resources\graph.ico --onefile .\spectra_analyzer\SpectraAnalyzer.py --add-data ".\resources\animation_maker.py;.\resources" --add-data ".\resources\Manual_general.html;.\resources" --add-data ".\resources\Manual_animation.html;.\resources" --name SpectraAnalyzer
+#  script:
+#    - bash
+#    - pip install --upgrade pip
+#    - pip install --upgrade pyinstaller
+#    - pip install --requirement requirements.txt
+#    - pyinstaller -w --icon .\resources\graph.ico --onefile .\spectra_analyzer\SpectraAnalyzer.py --add-data ".\resources\animation_maker.py;.\resources" --add-data ".\resources\Manual_general.html;.\resources" --add-data ".\resources\Manual_animation.html;.\resources" --name SpectraAnalyzer
 
     
-  artifacts:
-    paths:
-      - build/
-      - dist/
+#  artifacts:
+#    paths:
+#      - build/
+#      - dist/
 
 build_macos_package:
   stage: build
   tags:
     - macos-medium-m1
-  image: macos-12
+  image: macos-14
   script:
     - pip install --upgrade pip
     - pip install --upgrade pyinstaller
