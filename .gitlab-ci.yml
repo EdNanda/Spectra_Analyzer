@@ -25,6 +25,9 @@ build_macos_package:
   stage: build
     - macos-medium-m1
   
+  image: macos-12
+
+  
   script:
     - pip install --upgrade pip
     - pip install --upgrade pyinstaller
