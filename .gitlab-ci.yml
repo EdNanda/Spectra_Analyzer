@@ -25,7 +25,7 @@ build_macos_package:
   stage: build
   tags:
     - macos-medium-m1
-  image: "hcr.helmholtz.cloud/ci/macos/ventura-base:latest"
+  image: "hcr.helmholtz.cloud/ci/macos/sonoma-base:latest"
 
   before_script:
         - brew install python3
