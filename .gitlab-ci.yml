@@ -35,7 +35,7 @@ build_macos_package:
   script:
       - pip install --requirement requirements.txt
       - pip install pyinstaller
-      - pyinstaller -w --icon .\resources\graph.ico --onefile .\spectra_analyzer\SpectraAnalyzer.py --add-data ".\resources\animation_maker.py;.\resources" --add-data ".\resources\Manual_general.html;.\resources" --add-data ".\resources\Manual_animation.html;.\resources" --name SpectraAnalyzer
+      - pyinstaller -w --icon=.\resources\graph.ico --onefile=.\spectra_analyzer\SpectraAnalyzer.py --add-data=".\resources\animation_maker.py;.\resources" --add-data=".\resources\Manual_general.html;.\resources" --add-data=".\resources\Manual_animation.html;.\resources" --name=SpectraAnalyzer
   artifacts:
     paths:
         - build/
