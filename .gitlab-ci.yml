@@ -25,9 +25,12 @@ build_macos_package:
   stage: build
   tags:
     - macos-medium-m1
-  matrix:
-    - PYTHON_VERSION: ["3.9", "3.10", "3.11"]
-  image: "hcr.helmholtz.cloud/ci/macos/ventura-base:latest"
+  image: "$IMAGE"
+  parallel:
+      matrix:
+        - PYTHON_VERSION: ["3.9", "3.10", "3.11"]
+          IMAGE:
+                - "hcr.helmholtz.cloud/ci/macos/ventura-base:latest"
   script:
     - brew install python@$3.11
     - brew link --overwrite python@$3.11
