@@ -27,9 +27,9 @@ build_macos_package:
     - macos-medium-m1
   image: "hcr.helmholtz.cloud/ci/macos/ventura-base:latest"
   script:
-    - pip install --upgrade pip
-    - pip install --upgrade pyinstaller
-    - pip install --requirement requirements.txt
+    - pip3 install --upgrade pip3
+    - pip3 install --upgrade pyinstaller
+    - pip3 install --requirement requirements.txt
     - pyinstaller -w --icon .\resources\graph.ico --onefile .\spectra_analyzer\SpectraAnalyzer.py --add-data ".\resources\animation_maker.py;.\resources" --add-data ".\resources\Manual_general.html;.\resources" --add-data ".\resources\Manual_animation.html;.\resources" --name SpectraAnalyzer
   artifacts:
     paths:
