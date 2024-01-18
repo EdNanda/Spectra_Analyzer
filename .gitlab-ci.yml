@@ -25,7 +25,7 @@ build_macos_package:
   stage: build
   tags:
     - macos-medium-m1
-  image: macos-14
+  image: "hcr.helmholtz.cloud/ci/macos/ventura-base:latest"
   script:
     - pip install --upgrade pip
     - pip install --upgrade pyinstaller
