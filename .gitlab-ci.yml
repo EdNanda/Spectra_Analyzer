@@ -25,29 +25,18 @@ build_macos_package:
   stage: build
   tags:
     - macos-medium-m1
-  image: "$IMAGE"
-  parallel:
-      matrix:
-        - PYTHON_VERSION: ["3.9", "3.10", "3.11"]
-          IMAGE:
-                - "hcr.helmholtz.cloud/ci/macos/ventura-base:latest"
-test:
-    image: "$IMAGE"
-    parallel:
-        matrix:
-            - PYTHON_VERSION: ["3.9", "3.10", "3.11"]
-              IMAGE:
-                - "hcr.helmholtz.cloud/ci/macos/ventura-base:latest"
-    before_script:
-        - brew install python@${PYTHON_VERSION}
-        - brew link --overwrite python@${PYTHON_VERSION}
+  image: "hcr.helmholtz.cloud/ci/macos/ventura-base:latest"
+
+  before_script:
+        - brew install python3
+        - brew link --overwrite python3
         - pip3 install --upgrade pip poetry
-        - poetry env use ${PYTHON_VERSION} && poetry install
-    script:
+        - poetry env use python3 && poetry install
+  script:
       - pip install --requirement requirements.txt
       - pyinstaller -w --icon .\resources\graph.ico --onefile .\spectra_analyzer\SpectraAnalyzer.py --add-data ".\resources\animation_maker.py;.\resources" --add-data ".\resources\Manual_general.html;.\resources" --add-data ".\resources\Manual_animation.html;.\resources" --name SpectraAnalyzer
-    artifacts:
-      paths:
+  artifacts:
+    paths:
         - build/
         - dist/
 
